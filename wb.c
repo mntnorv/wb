@@ -66,16 +66,20 @@ int main(int argc, char* argv[]) {
 	/* Main operation */
 	puts("Logging in...");
 	cookies = wb_login("", "");
+
 	puts("Getting toplist...");
 	toplist = curl_get_response(URL_TOPLIST, NULL, &cookies, 0);
+
 	puts("Converting to XML...");
 	toplist_xml = tidy_convert_to_xml(toplist);
-	puts("Cleaning up...");
-	/*printf("%s\n", toplist_xml);*/
 	free(toplist);
+
+	puts("Parsing XML...");
+	wb_get_image_page_urls(toplist_xml);
 	free(toplist_xml);
 
 	/* Cleanup nd return */
+	puts("Cleaning up...");
 	curl_slist_free_all(cookies);
 	curl_global_cleanup();
 	xmlCleanupParser();
@@ -230,11 +234,12 @@ char *tidy_convert_to_xml(char *html) {
 
 	/* Intentionaly left 0 to get the required buffer size. */
 	unsigned int buffer_size = 0;
-	char *clean_html = (char *) malloc(1);
+	char *xml = (char *) malloc(1);
 
 	document = tidyCreate();
 	tidyOptSetBool(document, TidyForceOutput, yes);
 	tidyOptSetBool(document, TidyXmlOut, yes);
+	tidyOptSetBool(document, TidyNumEntities, yes);
 	tidyOptSetInt(document, TidyWrapLen, 4096);
 	tidySetErrorBuffer(document, &tidy_err_buffer);
 	tidyBufInit(&doc_buffer);
@@ -245,13 +250,13 @@ char *tidy_convert_to_xml(char *html) {
 	if (res >= 0) {
 		res = tidyCleanAndRepair(document);
 		if (res >= 0) {
-			res = tidySaveString(document, clean_html, &buffer_size);
+			res = tidySaveString(document, xml, &buffer_size);
 			/* Expand the buffer until tidy's output fits */
 			while (res == -ENOMEM) {
 				buffer_size++;
-				clean_html = (char *) realloc(clean_html, buffer_size);
-				res = tidySaveString(document, clean_html, &buffer_size);
-				clean_html[buffer_size] = '\0';
+				xml = (char *) realloc(xml, buffer_size);
+				res = tidySaveString(document, xml, &buffer_size);
+				xml[buffer_size] = '\0';
 			}
 		}
 	}
@@ -265,7 +270,7 @@ char *tidy_convert_to_xml(char *html) {
 	tidyBufFree(&tidy_err_buffer);
 	tidyRelease(document);
 
-	return clean_html;
+	return xml;
 }
 
 /* Write curl response to a string */
