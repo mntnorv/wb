@@ -15,3 +15,7 @@
 *.exe
 *.out
 *.app
+
+# Core and stackdump
+*.core
+*.stackdump

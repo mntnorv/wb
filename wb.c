@@ -3,6 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <curl/curl.h>
+#include <tidy/tidy.h>
+#include <tidy/buffio.h>
 
 /*
  * Global constants
@@ -30,8 +32,12 @@ struct curl_response {
 struct curl_slist *wb_login(char *username, char *password);
 struct curl_slist *wb_get_image_page_urls(char *html_data);
 
+void dump_nodes(TidyDoc document, TidyNode root);
+
 char *curl_get_response(const char *url, char *post_data, struct curl_slist *cookies);
 void curl_add_cookies(CURL *curl, struct curl_slist *cookies);
+
+void tidy_use_html_tree(char *html, void (*tree_function)(TidyDoc, TidyNode));
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data);
 char *url_encode(char *str);
@@ -52,7 +58,7 @@ int main(int argc, char* argv[]) {
 	/* Main operation */
 	cookies = wb_login("", "");
 	toplist = curl_get_response(URL_TOPLIST, NULL, cookies);
-	puts(toplist);
+	tidy_use_html_tree(toplist, dump_nodes);
 	free(toplist);
 
 	/* Cleanup nd return */
@@ -126,12 +132,39 @@ struct curl_slist *wb_login(char *username, char *password) {
 /* Get wallbase.cc image page URLs from HTML */
 /* IMPORTANT: the returned list must be freed with curl_slist_free_all() */
 struct curl_slist *wb_get_image_page_urls(char *html_data) {
+	struct curl_slist *urls = NULL;
 
+	return urls;
 }
 
 /*
  * Helper function implementations
  */
+
+/* Dump all nodes */
+void dump_nodes(TidyDoc document, TidyNode root) {
+	TidyNode child;
+	for (child = tidyGetChild(root); child; child = tidyGetNext(child)) {
+		ctmbstr name = tidyNodeGetName(child);
+		if (name != NULL) {
+			TidyAttr attr;
+			printf("<%s ", name);
+			for (attr=tidyAttrFirst(child); attr; attr=tidyAttrNext(attr)) {
+				printf(tidyAttrName(attr));
+				tidyAttrValue(attr)?printf("=\"%s\" ", tidyAttrValue(attr)):printf(" ");
+			}
+			printf(">\n");
+		}
+		/*else {
+			TidyBuffer buf;
+			tidyBufInit(&buf);
+			tidyNodeGetText(document, child, &buf);
+			printf("%s\n", buf.bp?(char *)buf.bp:"");
+			tidyBufFree(&buf);
+		}*/
+		dump_nodes(document, child);
+	}
+}
 
 /* Connect to URL with GET or POST requests and return the response. */
 /* If post_data is NULL, then a GET request is issued. */
@@ -181,6 +214,36 @@ void curl_add_cookies(CURL *curl, struct curl_slist *cookies) {
 		curl_easy_setopt(curl, CURLOPT_COOKIELIST, cookie->data);
 		cookie = cookie->next;
 	}
+}
+
+/* Initializes a TinyDoc object from HTML code. */
+/* After that calls your specified function with the document. */
+/* Cleans up after itself. */
+void tidy_use_html_tree(char *html, void (*tree_function)(TidyDoc, TidyNode)) {
+	TidyDoc document;
+	TidyBuffer doc_buffer = {0};
+	TidyBuffer tidy_err_buffer = {0};
+	int res;
+
+	document = tidyCreate();
+	tidyOptSetBool(document, TidyForceOutput, yes);
+	tidyOptSetInt(document, TidyWrapLen, 4096);
+	tidySetErrorBuffer(document, &tidy_err_buffer);
+	tidyBufInit(&doc_buffer);
+
+	tidyBufAppend(&doc_buffer, html, strlen(html));
+
+	res = tidyParseBuffer(document, &doc_buffer);
+	if (res >= 0) {
+		res = tidyCleanAndRepair(document);
+		if (res >= 0) {
+			tree_function(document, tidyGetBody(document));
+		}
+	}
+
+	tidyBufFree(&doc_buffer);
+	tidyBufFree(&tidy_err_buffer);
+	tidyRelease(document);
 }
 
 /* Write curl response to a string */
