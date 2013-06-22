@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <ctype.h>
 #include <curl/curl.h>
 #include <tidy/tidy.h>
@@ -32,12 +33,10 @@ struct curl_response {
 struct curl_slist *wb_login(char *username, char *password);
 struct curl_slist *wb_get_image_page_urls(char *html_data);
 
-void dump_nodes(TidyDoc document, TidyNode root);
-
 char *curl_get_response(const char *url, char *post_data, struct curl_slist *cookies);
 void curl_add_cookies(CURL *curl, struct curl_slist *cookies);
 
-void tidy_use_html_tree(char *html, void (*tree_function)(TidyDoc, TidyNode));
+char *tidy_convert_to_xml(char *html);
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data);
 char *url_encode(char *str);
@@ -51,15 +50,22 @@ int main(int argc, char* argv[]) {
 	/* Variables */
 	struct curl_slist *cookies;
 	char *toplist;
+	char *toplist_xml;
 
 	/* Init */
 	curl_global_init(CURL_GLOBAL_ALL);
 
 	/* Main operation */
+	puts("Logging in...");
 	cookies = wb_login("", "");
+	puts("Getting toplist...");
 	toplist = curl_get_response(URL_TOPLIST, NULL, cookies);
-	tidy_use_html_tree(toplist, dump_nodes);
+	puts("Converting to XML...");
+	toplist_xml = tidy_convert_to_xml(toplist);
+	puts("Cleaning up...");
+	/*printf("%s\n", toplist_xml);*/
 	free(toplist);
+	free(toplist_xml);
 
 	/* Cleanup nd return */
 	curl_slist_free_all(cookies);
@@ -141,31 +147,6 @@ struct curl_slist *wb_get_image_page_urls(char *html_data) {
  * Helper function implementations
  */
 
-/* Dump all nodes */
-void dump_nodes(TidyDoc document, TidyNode root) {
-	TidyNode child;
-	for (child = tidyGetChild(root); child; child = tidyGetNext(child)) {
-		ctmbstr name = tidyNodeGetName(child);
-		if (name != NULL) {
-			TidyAttr attr;
-			printf("<%s ", name);
-			for (attr=tidyAttrFirst(child); attr; attr=tidyAttrNext(attr)) {
-				printf(tidyAttrName(attr));
-				tidyAttrValue(attr)?printf("=\"%s\" ", tidyAttrValue(attr)):printf(" ");
-			}
-			printf(">\n");
-		}
-		/*else {
-			TidyBuffer buf;
-			tidyBufInit(&buf);
-			tidyNodeGetText(document, child, &buf);
-			printf("%s\n", buf.bp?(char *)buf.bp:"");
-			tidyBufFree(&buf);
-		}*/
-		dump_nodes(document, child);
-	}
-}
-
 /* Connect to URL with GET or POST requests and return the response. */
 /* If post_data is NULL, then a GET request is issued. */
 /* Uses cookies if cookies is not NULL. */
@@ -216,17 +197,21 @@ void curl_add_cookies(CURL *curl, struct curl_slist *cookies) {
 	}
 }
 
-/* Initializes a TinyDoc object from HTML code. */
-/* After that calls your specified function with the document. */
-/* Cleans up after itself. */
-void tidy_use_html_tree(char *html, void (*tree_function)(TidyDoc, TidyNode)) {
+/* Converts HTML to XML. */
+/* IMPORTANT: the resulting string must be freed using free(). */
+char *tidy_convert_to_xml(char *html) {
 	TidyDoc document;
 	TidyBuffer doc_buffer = {0};
 	TidyBuffer tidy_err_buffer = {0};
 	int res;
 
+	/* Intentionaly left 0 to get the required buffer size. */
+	unsigned int buffer_size = 0;
+	char *clean_html = (char *) malloc(1);
+
 	document = tidyCreate();
 	tidyOptSetBool(document, TidyForceOutput, yes);
+	tidyOptSetBool(document, TidyXmlOut, yes);
 	tidyOptSetInt(document, TidyWrapLen, 4096);
 	tidySetErrorBuffer(document, &tidy_err_buffer);
 	tidyBufInit(&doc_buffer);
@@ -237,13 +222,27 @@ void tidy_use_html_tree(char *html, void (*tree_function)(TidyDoc, TidyNode)) {
 	if (res >= 0) {
 		res = tidyCleanAndRepair(document);
 		if (res >= 0) {
-			tree_function(document, tidyGetBody(document));
+			res = tidySaveString(document, clean_html, &buffer_size);
+			/* Expand the buffer until tidy's output fits */
+			while (res == -ENOMEM) {
+				buffer_size++;
+				clean_html = (char *) realloc(clean_html, buffer_size);
+				res = tidySaveString(document, clean_html, &buffer_size);
+				clean_html[buffer_size] = '\0';
+			}
 		}
+	}
+
+	if (res < 0) {
+		fprintf(stderr, "Error tidying HTML\n");
+		exit(1);
 	}
 
 	tidyBufFree(&doc_buffer);
 	tidyBufFree(&tidy_err_buffer);
 	tidyRelease(document);
+
+	return clean_html;
 }
 
 /* Write curl response to a string */
