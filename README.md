@@ -1,4 +1,4 @@
 wb.c
 ====
 
-A wallbase downloader, written in C
+A wallbase.cc image downloader, written in C
