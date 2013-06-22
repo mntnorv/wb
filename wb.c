@@ -1,3 +1,13 @@
+/*
+ * wb.c
+ * A wallbase.cc image dowloader
+ *
+ * By Mantas Norvaiša, 2013
+ * Uses cURL, libTidy and libxml2
+ *
+ * http://github.com/mntnorv/
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +24,9 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 
-/*
+/**************************************************
  * Global constants
- */
+ **************************************************/
 
 static const char *URL_LOGIN = "http://wallbase.cc/user/login";
 static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
@@ -27,18 +37,18 @@ static const char *XHTML_PREFIX = "xhtml";
 static const char *XHTML_HREF = "http://www.w3.org/1999/xhtml";
 static const char *XPATH_IMAGE_PAGE_URL = "//xhtml:div[@class='thumb']/xhtml:a[@class='thdraggable thlink']";
 
-/*
+/**************************************************
  * Structs
- */
+ **************************************************/
 
 struct curl_response {
 	size_t size;
 	char *data;
 };
 
-/*
+/**************************************************
  * Function declarations
- */
+ **************************************************/
 
 struct curl_slist *wb_login(char *username, char *password);
 
@@ -57,9 +67,9 @@ char to_hex(char code);
 void
 print_xpath_nodes(xmlNodeSetPtr nodes);
 
-/*
+/**************************************************
  * Main
- */
+ **************************************************/
 
 int main(int argc, char* argv[]) {
 	/* Variables */
@@ -75,9 +85,6 @@ int main(int argc, char* argv[]) {
 	/* Main operation */
 	puts("Logging in...");
 	cookies = wb_login("", "");
-	if (cookies == NULL) {
-		return 1;
-	}
 
 	puts("Getting HTML...");
 	toplist = curl_get_response(URL_TOPLIST, NULL, &cookies, 0);
@@ -112,9 +119,9 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-/*
- * wallbase.cc function implementations
- */
+/**************************************************
+ * wallbase-specific function implementations
+ **************************************************/
 
 /**
  * wb_login:
@@ -126,7 +133,6 @@ int main(int argc, char* argv[]) {
  * curl_slist_free_all().
  *
  * Returns a curl_slist of cookies with the login session info.
- * If an error occurs returns NULL.
  */
 struct curl_slist *wb_login(char *username, char *password) {
 	char *enc_username;
@@ -145,22 +151,22 @@ struct curl_slist *wb_login(char *username, char *password) {
 	response = curl_get_response(URL_LOGIN, post_data, &cookies, 1);
 	if (response == NULL) {
 		fprintf(stderr, "Error: curl_get_response() failed\n");
-		return NULL;
+		exit(1);
 	}
 
 	if (strlen(response) > 0) {
 		fprintf(stderr, "Error: unable to login to wallbase.cc\n");
 		free(response);
-		return NULL;
+		exit(1);
 	}
 	free(response);
 
 	return cookies;
 }
 
-/*
+/**************************************************
  * Helper function implementations
- */
+ **************************************************/
 
 /**
  * curl_get_response:
