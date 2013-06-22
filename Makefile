@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-c -Wall -Werror -pedantic -g
-LDFLAGS=-lcurl -ltidy
+LDFLAGS=-lcurl -ltidy -lxml2
 SOURCES=wb.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=wb
