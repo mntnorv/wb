@@ -23,6 +23,10 @@ static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
 
 static const char *FORMAT_LOGIN = "usrname=%s&pass=%s&nopass_email=Type+in+your+e-mail+and+press+enter&nopass=0&1=1";
 
+static const char *XHTML_PREFIX = "xhtml";
+static const char *XHTML_HREF = "http://www.w3.org/1999/xhtml";
+static const char *XPATH_IMAGE_PAGE_URL = "//xhtml:div[@class='thumb']/xhtml:a[@class='thdraggable thlink']";
+
 /*
  * Structs
  */
@@ -37,17 +41,21 @@ struct curl_response {
  */
 
 struct curl_slist *wb_login(char *username, char *password);
-struct curl_slist *wb_get_image_page_urls(char *html_data);
 
 char *curl_get_response(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies);
-void curl_connect(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies);
+int curl_connect(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies);
 void curl_add_cookies(CURL *curl, struct curl_slist *cookies);
 
 char *tidy_convert_to_xml(char *html);
 
+xmlXPathObjectPtr eval_xpath_expr(xmlChar *xml_data, xmlChar *expression);
+
 size_t write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data);
 char *url_encode(char *str);
 char to_hex(char code);
+
+void
+print_xpath_nodes(xmlNodeSetPtr nodes);
 
 /*
  * Main
@@ -55,9 +63,10 @@ char to_hex(char code);
 
 int main(int argc, char* argv[]) {
 	/* Variables */
-	struct curl_slist *cookies;
+	struct curl_slist *cookies = NULL;
 	char *toplist;
 	char *toplist_xml;
+	xmlXPathObjectPtr urls_xpath_object;
 
 	/* Init */
 	curl_global_init(CURL_GLOBAL_ALL);
@@ -66,17 +75,34 @@ int main(int argc, char* argv[]) {
 	/* Main operation */
 	puts("Logging in...");
 	cookies = wb_login("", "");
+	if (cookies == NULL) {
+		return 1;
+	}
 
-	puts("Getting toplist...");
+	puts("Getting HTML...");
 	toplist = curl_get_response(URL_TOPLIST, NULL, &cookies, 0);
+	if (toplist == NULL) {
+		fprintf(stderr, "Error: curl_get_response() failed\n");
+		return 1;
+	}
 
 	puts("Converting to XML...");
 	toplist_xml = tidy_convert_to_xml(toplist);
 	free(toplist);
+	if (toplist_xml == NULL) {
+		fprintf(stderr, "Error: unable to convert HTML to XML\n");
+		return 1;
+	}
 
 	puts("Parsing XML...");
-	wb_get_image_page_urls(toplist_xml);
+	urls_xpath_object = eval_xpath_expr(BAD_CAST toplist_xml, BAD_CAST XPATH_IMAGE_PAGE_URL);
 	free(toplist_xml);
+	if (urls_xpath_object == NULL) {
+		fprintf(stderr, "Error: unable to parse XML\n");
+		return 1;
+	}
+
+	xmlXPathFreeObject(urls_xpath_object);
 
 	/* Cleanup nd return */
 	puts("Cleaning up...");
@@ -90,9 +116,18 @@ int main(int argc, char* argv[]) {
  * wallbase.cc function implementations
  */
 
-/* Login to wallbase.cc */
-/* Returns a list of cookies */
-/* IMPORTANT: curl_slist_free_all() the cookies after usage */
+/**
+ * wb_login:
+ * @username - wallbase.cc username
+ * @password - wallbase.cc password
+ *
+ * Login to wallbase.cc, by setting your specified cookies.
+ * IMPORTANT: The resulting list of cookies must be freed with
+ * curl_slist_free_all().
+ *
+ * Returns a curl_slist of cookies with the login session info.
+ * If an error occurs returns NULL.
+ */
 struct curl_slist *wb_login(char *username, char *password) {
 	char *enc_username;
 	char *enc_password;
@@ -108,47 +143,41 @@ struct curl_slist *wb_login(char *username, char *password) {
 
 	/* Login */
 	response = curl_get_response(URL_LOGIN, post_data, &cookies, 1);
-	if (strlen(response) > 0) {
-		fprintf(stderr, "Error: failed to login to wallbase.cc\n");
-		exit(1);
+	if (response == NULL) {
+		fprintf(stderr, "Error: curl_get_response() failed\n");
+		return NULL;
 	}
+
+	if (strlen(response) > 0) {
+		fprintf(stderr, "Error: unable to login to wallbase.cc\n");
+		free(response);
+		return NULL;
+	}
+	free(response);
 
 	return cookies;
-}
-
-/* Get wallbase.cc image page URLs from HTML */
-/* IMPORTANT: the returned list must be freed with curl_slist_free_all() */
-struct curl_slist *wb_get_image_page_urls(char *xml_data) {
-	struct curl_slist *urls = NULL;
-
-	xmlDocPtr xml_doc;
-	/*xmlXPathContextPtr xpath_context;
-	xmlXPathObjectPtr xpath_object;*/
-
-	xmlChar *xml_char_data = xmlCharStrdup(xml_data);
-	xml_doc = xmlParseDoc(xml_char_data);
-	free(xml_char_data);
-	if (xml_doc == NULL) {
-		fprintf(stderr, "Error: unable to parse XML\n");
-		exit(1);
-	}
-
-	/*xmlXPathFreeObject(xpath_object);
-	xmlXPathFreeContext(xpath_context);*/
-	xmlFreeDoc(xml_doc);
-
-	return urls;
 }
 
 /*
  * Helper function implementations
  */
 
-/* Connect to URL with GET or POST requests and return the response. */
-/* If post_data is NULL, then a GET request is issued. */
-/* Uses cookies if cookies is not NULL. */
-/* Can also update cookies if update_cookies is not 0. */
-/* IMPORTANT: the returned string should be freed with free(). */
+/**
+ * curl_get_response:
+ * @url:                         URL to connect to
+ * @post_data: (optional)        the post data as a string. If specified,
+ *                               a POST request is made. If post is not
+ *                               needed, pass NULL here and a GET request
+ *                               will be made.
+ * @cookies: (optional)          the cookies to use for this request.
+ * @update_cookies:              1 if you need the cookies to be updated
+ *                               0 to leave the cookies as they were
+ *
+ * Connects to URL with a GET or POST request and returns the response.
+ * IMPORTANT: the returned string should be freed with free().
+ * 
+ * Returns the response as a string. If an error occurs, returns NULL.
+ */
 char *curl_get_response(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies) {
 	CURL *curl;
 	CURLcode res;
@@ -158,8 +187,7 @@ char *curl_get_response(const char *url, char *post_data, struct curl_slist **co
 	response.size = 0;
 	response.data = malloc(4096);
 	if (response.data == NULL) {
-		fprintf(stderr, "Failed to allocate memory.\n");
-		exit(1);
+		return NULL;
 	}
 	response.data[0] = '\0';
 
@@ -184,8 +212,8 @@ char *curl_get_response(const char *url, char *post_data, struct curl_slist **co
 	/* Perform CURL transaction */
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		fprintf(stderr, "Curl perform failed: %s\n", curl_easy_strerror(res));
-		exit(1);
+		curl_easy_cleanup(curl);
+		return NULL;
 	}
 
 	/* Update cookies if needed */
@@ -196,8 +224,8 @@ char *curl_get_response(const char *url, char *post_data, struct curl_slist **co
 
 		res = curl_easy_getinfo(curl, CURLINFO_COOKIELIST, cookies);
 		if (res != CURLE_OK) {
-			fprintf(stderr, "Curl get info failed: %s\n", curl_easy_strerror(res));
-			exit(1);
+			curl_easy_cleanup(curl);
+			return NULL;
 		}
 	}
 
@@ -206,16 +234,34 @@ char *curl_get_response(const char *url, char *post_data, struct curl_slist **co
 	return response.data;
 }
 
-/* Wrapper for curl_get_response() when the response is not needed. */
-/* Frees the response with free(). */
-void curl_connect(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies) {
+/**
+ * curl_connect:
+ *
+ * A wrapper for curl_get_response. Should be used when the
+ * response is not needed.
+ * For argument descriptions see curl_get_response().
+ *
+ * Returns 0 on success, -1 otherwise.
+ */
+int curl_connect(const char *url, char *post_data, struct curl_slist **cookies, int update_cookies) {
 	char *response;
+
 	response = curl_get_response(url, post_data, cookies, update_cookies);
+	if (response == NULL) {
+		return -1;
+	}
+
 	free(response);
+	return 0;
 }
 
-/* Add all cookies in a curl_slist (returned by CURLINFO_COOKIELIST) */
-/* to a CURL object */
+/**
+ * curl_add_cookies:
+ * @curl - the CURL structure to add cookies to
+ * @cookies - a curl_slist containing the cookies to be added
+ *
+ * Adds all cookies from a curl_slist to a CURL structure.
+ */
 void curl_add_cookies(CURL *curl, struct curl_slist *cookies) {
 	struct curl_slist *cookie = cookies;
 	while (cookie != NULL) {
@@ -224,8 +270,16 @@ void curl_add_cookies(CURL *curl, struct curl_slist *cookies) {
 	}
 }
 
-/* Converts HTML to XML. */
-/* IMPORTANT: the resulting string must be freed using free(). */
+/**
+ * tidy_convert_to_xml:
+ * @html - the HTML you want to convert to XML
+ * 
+ * Converts HTML to XML using libTidy.
+ * IMPORTANT: the resulting string must be freed using free().
+ * 
+ * Returns a string containing the converted XML. If an error occurs
+ * returns NULL.
+ */
 char *tidy_convert_to_xml(char *html) {
 	TidyDoc document;
 	TidyBuffer doc_buffer = {0};
@@ -236,16 +290,19 @@ char *tidy_convert_to_xml(char *html) {
 	unsigned int buffer_size = 0;
 	char *xml = (char *) malloc(1);
 
+	/* Set up the tidy parser */
 	document = tidyCreate();
 	tidyOptSetBool(document, TidyForceOutput, yes);
 	tidyOptSetBool(document, TidyXmlOut, yes);
 	tidyOptSetBool(document, TidyNumEntities, yes);
 	tidyOptSetInt(document, TidyWrapLen, 4096);
+	tidyOptSetInt(document, TidyDoctypeMode, TidyDoctypeOmit);
 	tidySetErrorBuffer(document, &tidy_err_buffer);
 	tidyBufInit(&doc_buffer);
 
 	tidyBufAppend(&doc_buffer, html, strlen(html));
 
+	/* Parse HTML, repair it, and convert to XML */
 	res = tidyParseBuffer(document, &doc_buffer);
 	if (res >= 0) {
 		res = tidyCleanAndRepair(document);
@@ -261,11 +318,15 @@ char *tidy_convert_to_xml(char *html) {
 		}
 	}
 
+	/* Check for errors */
 	if (res < 0) {
-		fprintf(stderr, "Error tidying HTML\n");
-		exit(1);
+		tidyBufFree(&doc_buffer);
+		tidyBufFree(&tidy_err_buffer);
+		tidyRelease(document);
+		return NULL;
 	}
 
+	/* Clean up */
 	tidyBufFree(&doc_buffer);
 	tidyBufFree(&tidy_err_buffer);
 	tidyRelease(document);
@@ -273,7 +334,71 @@ char *tidy_convert_to_xml(char *html) {
 	return xml;
 }
 
-/* Write curl response to a string */
+/**
+ * eval_xpath_expr:
+ * @xml_data - a string with the xml data
+ * @expression - the expressions to evaluate
+ * 
+ * Evaluates an XPath expression on the given XML file.
+ * 
+ * Returns an xmlXPathObjectPtr, that must be freed with
+ * xmlXPathFreeObject(). If an error occurs, returns NULL.
+ */
+xmlXPathObjectPtr eval_xpath_expr(xmlChar *xml_data, xmlChar *expression) {
+	xmlDocPtr xml_doc;
+	xmlXPathContextPtr xpath_context;
+	xmlXPathObjectPtr xpath_object;
+
+	/* Create an XML document */
+	xml_doc = xmlParseDoc(xml_data);
+	if (xml_doc == NULL) {
+		fprintf(stderr, "Error: unable to parse XML\n");
+		return NULL;
+	}
+
+	/* Create XPath context */
+	xpath_context = xmlXPathNewContext(xml_doc);
+	if (xpath_context == NULL) {
+		fprintf(stderr, "Error: unable to create XPath context\n");
+		xmlFreeDoc(xml_doc);
+		return NULL;
+	}
+
+	/* Add XML namespace for XHTML */
+	if (xmlXPathRegisterNs(xpath_context, BAD_CAST XHTML_PREFIX, BAD_CAST XHTML_HREF) != 0) {
+		fprintf(stderr, "Error: unable to register XML namespace\n");
+		xmlXPathFreeContext(xpath_context);
+		xmlFreeDoc(xml_doc);
+		return NULL;
+	}
+
+	/* Evaluate XPath expression */
+	xpath_object = xmlXPathEvalExpression(expression, xpath_context);
+	if (xpath_object == NULL) {
+		fprintf(stderr, "Error: unable to evaluate XPath expression\n");
+		xmlXPathFreeContext(xpath_context);
+		xmlFreeDoc(xml_doc);
+		return NULL;
+	}
+
+	/* Clean up */
+	xmlXPathFreeContext(xpath_context);
+	xmlFreeDoc(xml_doc);
+
+	return xpath_object;
+}
+
+/**
+ * write_data:
+ * @ptr - CURL response data pointer
+ * @size - size of the data to write in units of nmemb
+ * @nmemb - multiplier of size
+ * @data - the structure to write data to
+ * 
+ * Writes CURL response to a curl_response structure.
+ *
+ * Returns the size of data written in bytes.
+ */
 size_t write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data) {
 	size_t index = data->size;
 	size_t n = (size * nmemb);
@@ -303,14 +428,28 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *da
 	return size * nmemb;
 }
 
-/* Converts an integer value to its hex character*/
+/**
+ * to_hex:
+ * @code - char (from 0 to 15) to convert to hex
+ *
+ * Converts a number from 0 to 15 to hex.
+ *
+ * Returns the number converted to hex as a char.
+ */
 char to_hex(char code) {
 	static char hex[] = "0123456789abcdef";
 	return hex[code & 15];
 }
 
-/* Returns a url-encoded version of str */
-/* IMPORTANT: be sure to free() the returned string after use */
+/**
+ * url_encode:
+ * @str - string to URL-encode
+ *
+ * URL-encodes a string.
+ * IMPORTANT: the returned string must be freed with free().
+ *
+ * Returns the URL-encoded string.
+ */
 char *url_encode(char *str) {
 	char *pstr = str;
 	char *buf = malloc(strlen(str) * 3 + 1);
@@ -329,4 +468,30 @@ char *url_encode(char *str) {
 	}
 	*pbuf = '\0';
 	return buf;
+}
+
+void
+print_xpath_nodes(xmlNodeSetPtr nodes) {
+    xmlNodePtr cur;
+    int size;
+    int i;
+    
+    size = (nodes) ? nodes->nodeNr : 0;
+    
+    printf("Result (%d nodes):\n", size);
+    for(i = 0; i < size; ++i) {
+		if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
+		    cur = nodes->nodeTab[i];   	    
+		    if(cur->ns) { 
+	    	        printf("= element node \"%s:%s\": href=%s\n", 
+			    cur->ns->href, cur->name, xmlGetProp(cur, BAD_CAST "href"));
+		    } else {
+	    	        printf("= element node \"%s\": href=%s\n", 
+			    cur->name, xmlGetProp(cur, BAD_CAST "href"));
+		    }
+		} else {
+		    cur = nodes->nodeTab[i];    
+		    printf("= node \"%s\": type %d", cur->name, cur->type);
+		}
+    }
 }
