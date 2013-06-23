@@ -1,3 +1,11 @@
 language: c
+
+notifications:
+	email: false
+
 compiler: gcc
+
+before_script:
+	- ./get_deps
+
 script: make

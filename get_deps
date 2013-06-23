@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# cURL
+echo -en "\n\033[32mInstalling cURL\033[m\n\n"
+echo ""
+wget http://curl.haxx.se/download/curl-7.31.0.tar.gz
+tar zxvf curl-7.31.0.tar.gz
+cd curl-7.31.0
+./configure
+make
+make install
+cd ..
+rm -rf curl-*
+
+# libTidy
+echo -en "\n\033[32mInstalling libTidy\033[m\n\n"
+git clone https://github.com/toddr/libtidy.git
+cd libtidy/build/gmake
+make
+make install
+cd ../../../
+rm -rf libtidy
+
+# libxml2
+echo -en "\n\033[32mInstalling libxml2\033[m\n\n"
+wget ftp://xmlsoft.org/libxml2/libxml2-2.9.1.tar.gz
+tar zxvf libxml2-2.9.1.tar.gz
+cd libxml2-2.9.1
+./configure
+make
+make install
+cd ..
+rm -rf libxml2-*
