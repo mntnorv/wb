@@ -3,6 +3,5 @@ notifications:
   email: false
 compiler: gcc
 before_script:
-  - chmod +x get_deps
-  - ./get_deps
+  - apt-get install libtidy-dev curl-dev libxml2-dev
 script: make
