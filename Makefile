@@ -5,7 +5,7 @@ VERSION = 0.1
 
 # Compiler options
 CC=gcc
-CFLAGS=-Wall -Werror -pedantic -g
+CFLAGS=-Wall -Werror -pedantic -I/usr/include/libxml2/ -g
 LDFLAGS=-lcurl -ltidy -lxml2
 
 # Filenames
@@ -30,6 +30,3 @@ dist: clean
 	tar -cf $(APPNAME)-$(VERSION).tar $(APPNAME)-$(VERSION)
 	gzip $(APPNAME)-$(VERSION).tar
 	rm -rf $(APPNAME)-$(VERSION)
-
-check:
-	
