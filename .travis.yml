@@ -3,6 +3,6 @@ notifications:
   email: false
 compiler: gcc
 before_script:
-	- chmod +x get_deps
-	- ./get_deps
+  - chmod +x get_deps
+  - ./get_deps
 script: make
