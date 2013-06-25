@@ -19,6 +19,3 @@
 # Core and stackdump
 *.core
 *.stackdump
-
-# All folders
-*/*
