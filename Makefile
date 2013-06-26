@@ -1,12 +1,18 @@
 # wb.c Makefile
-# Version
+# App info
 APPNAME = wb.c
 VERSION = 0.1
 
-# Compiler options
-CC=gcc
-CFLAGS=-Wall -Werror -pedantic -I/usr/include/libxml2/ -g
-LDFLAGS=-lcurl -ltidy -lxml2
+# Compiler flags
+INCLUDES = -I/usr/include/libxml2/ -I/usr/include/tidy/
+LIBS = -lcurl -ltidy -lxml2
+DEFINES = -DVERSION=\"$(VERSION)\"
+
+CFLAGS = -g -Wall -Werror -pedantic $(INCLUDES) $(DEFINES)
+LDFLAGS = $(LIBS)
+
+# Compiler
+CC = gcc
 
 # Filenames
 SOURCES=wb.c
