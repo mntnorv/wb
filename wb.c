@@ -16,8 +16,8 @@
 
 #include <curl/curl.h>
 
-#include <tidy/tidy.h>
-#include <tidy/buffio.h>
+#include <tidy.h>
+#include <buffio.h>
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -55,6 +55,7 @@ struct curl_response {
 
 struct curl_slist *wb_login(const char *username, const char *password);
 struct curl_slist *wb_get_image_page_urls(const char *url, const char *post_data, struct curl_slist *cookies);
+struct curl_slist *wb_get_image_urls(const char *url, const char *post_data, struct curl_slist *cookies);
 char *wb_get_image_url(const char *url, struct curl_slist *cookies);
 
 char *curl_get_response(const char *url, const char *post_data, struct curl_slist **cookies, int update_cookies);
@@ -90,10 +91,19 @@ main(int argc, char* argv[]) {
 
 	/* Main operation */
 	cookies = wb_login("", "");
-	if (cookies == NULL) return 1;
+	if (cookies == NULL) {
+		curl_global_cleanup();
+		xmlCleanupParser();
+		return 1;
+	}
 
-	image_urls = wb_get_image_page_urls(URL_TOPLIST, NULL, cookies);
-	if (image_urls == NULL) return 1;
+	image_urls = wb_get_image_urls(URL_TOPLIST, NULL, cookies);
+	if (image_urls == NULL) {
+		curl_slist_free_all(cookies);
+		curl_global_cleanup();
+		xmlCleanupParser();
+		return 1;
+	}
 
 	img_url = image_urls;
 	while (img_url != NULL) {
@@ -137,6 +147,8 @@ wb_login(const char *username, const char *password) {
 	enc_username = url_encode(username);
 	enc_password = url_encode(password);
 	sprintf(post_data, FORMAT_LOGIN, enc_username, enc_password);
+	free(enc_username);
+	free(enc_password);
 
 	/* Login */
 	response = curl_get_response(URL_LOGIN, post_data, &cookies, 1);
@@ -148,6 +160,7 @@ wb_login(const char *username, const char *password) {
 	if (strlen(response) > 0) {
 		fprintf(stderr, "Error: unable to login to wallbase.cc\n");
 		free(response);
+		curl_slist_free_all(cookies);
 		return NULL;
 	}
 
@@ -163,7 +176,7 @@ wb_login(const char *username, const char *password) {
  * @param url - wallbase.cc url to get images from.
  * @param post_data - post data required for search parameters.
  * @param cookies - cookies with login session information.
- * @return a curl_slist of image urls on success, NULL
+ * @return a curl_slist of image page urls on success, NULL
  *   otherwise. IMPORTANT: the returned list must be freed with
  *   curl_slist_free_all().
  */
@@ -200,7 +213,7 @@ wb_get_image_page_urls(const char *url, const char *post_data,
 		current_node = result_nodes->nodeTab[i];
 		if(current_node->type == XML_ELEMENT_NODE) {
 			current_img_page = xmlGetProp(current_node, BAD_CAST "href");
-			urls = curl_slist_append(urls, strdup((char *)current_img_page));
+			urls = curl_slist_append(urls, (char *)current_img_page);
 			xmlFree(current_img_page);
 		}
 	}
@@ -213,6 +226,47 @@ wb_get_image_page_urls(const char *url, const char *post_data,
 }
 
 /**
+ * Connects to wallbase.cc with the specified post data and
+ * cookies and retrieves image urls.
+ *
+ * @param url - wallbase.cc url to get images from.
+ * @param post_data - post data required for search parameters.
+ * @param cookies - cookies with login session information.
+ * @return a curl_slist of image urls on success, NULL
+ *   otherwise. IMPORTANT: the returned list must be freed with
+ *   curl_slist_free_all().
+ */
+struct curl_slist *
+wb_get_image_urls(const char *url, const char *post_data,
+	struct curl_slist *cookies) {
+
+	struct curl_slist *img_urls = NULL;
+	struct curl_slist *img_page_urls;
+	struct curl_slist *img_page_url;
+	char *img_url;
+
+	/* Get image page URLs */
+	img_page_urls = wb_get_image_page_urls(url, post_data, cookies);
+
+	/* Get an image URL from every image page URL */
+	img_page_url = img_page_urls;
+	while (img_page_url != NULL) {
+		img_url = wb_get_image_url(img_page_url->data, cookies);
+		if (img_url != NULL) {
+			img_urls = curl_slist_append(img_urls, img_url);
+			free(img_url);
+		}
+
+		img_page_url = img_page_url->next;
+	}
+
+	/* Cleanup */
+	curl_slist_free_all(img_page_urls);
+
+	return img_urls;
+}
+
+/**
  * Get the full image url from a wallbase.cc image page url.
  *
  * @param url - wallbase.cc image page url.
@@ -220,7 +274,8 @@ wb_get_image_page_urls(const char *url, const char *post_data,
  * @return the URL of the image on success, NULL otherwise.
  *   IMPORTANT: the resulting string must be freed eith free().
  */
-char *wb_get_image_url(const char *url, struct curl_slist *cookies) {
+char *
+wb_get_image_url(const char *url, struct curl_slist *cookies) {
 	char *img_url = NULL;
 	char *encoded_url = NULL;
 
@@ -242,6 +297,7 @@ char *wb_get_image_url(const char *url, struct curl_slist *cookies) {
 	/* Get the encoded image url */
 	img_xpath_object = eval_xpath_expr(xml_doc, BAD_CAST XPATH_IMAGE_URL);
 	if (img_xpath_object == NULL) {
+		xmlFreeDoc(xml_doc);
 		return NULL;
 	}
 
@@ -250,6 +306,8 @@ char *wb_get_image_url(const char *url, struct curl_slist *cookies) {
 	result_node_count = (result_nodes) ? result_nodes->nodeNr : 0;
 	if (result_node_count != 1) {
 		fprintf(stderr, "Error: failed fetching encoded image url\n");
+		xmlXPathFreeObject(img_xpath_object);
+		xmlFreeDoc(xml_doc);
 		return NULL;
 	}
 
@@ -264,7 +322,7 @@ char *wb_get_image_url(const char *url, struct curl_slist *cookies) {
 	encoded_url[encoded_length] = '\0';
 	xmlFree(result_str);
 
-	/* Decode URL */
+	/* Decode URL*/
 	img_url = b64_decode(encoded_url);
 	free(encoded_url);
 
@@ -403,7 +461,7 @@ curl_get_response_as_xml(const char *url, const char *post_data,
 	}
 
 	/* Convert HTML to XML */
-	xml_data= tidy_convert_to_xml(html_data);
+	xml_data = tidy_convert_to_xml(html_data);
 	free(html_data);
 	if (xml_data == NULL) {
 		fprintf(stderr, "Error: unable to convert HTML to XML\n");
@@ -450,11 +508,9 @@ tidy_convert_to_xml(const char *html) {
 	TidyDoc document;
 	TidyBuffer doc_buffer = {0};
 	TidyBuffer tidy_err_buffer = {0};
+	TidyBuffer output_buffer = {0};
 	int res;
-
-	/* Intentionaly left 0 to get the required buffer size. */
-	unsigned int buffer_size = 0;
-	char *xml = (char *) malloc(1);
+	char *xml;
 
 	/* Set up the tidy parser */
 	document = tidyCreate();
@@ -473,14 +529,13 @@ tidy_convert_to_xml(const char *html) {
 	if (res >= 0) {
 		res = tidyCleanAndRepair(document);
 		if (res >= 0) {
-			res = tidySaveString(document, xml, &buffer_size);
-			/* Expand the buffer until tidy's output fits */
-			while (res == -ENOMEM) {
-				buffer_size++;
-				xml = (char *) realloc(xml, buffer_size);
-				res = tidySaveString(document, xml, &buffer_size);
-				xml[buffer_size] = '\0';
+			res = tidySaveBuffer(document, &output_buffer);
+			if (res >= 0) {
+				xml = (char *) malloc(output_buffer.size + 1);
+				memcpy(xml, output_buffer.bp, output_buffer.size);
+				xml[output_buffer.size] = '\0';
 			}
+			tidyBufFree(&output_buffer);
 		}
 	}
 
@@ -489,6 +544,7 @@ tidy_convert_to_xml(const char *html) {
 		tidyBufFree(&doc_buffer);
 		tidyBufFree(&tidy_err_buffer);
 		tidyRelease(document);
+		free(xml);
 		return NULL;
 	}
 
@@ -518,7 +574,6 @@ eval_xpath_expr(xmlDocPtr xml_doc, const xmlChar *expression) {
 	xpath_context = xmlXPathNewContext(xml_doc);
 	if (xpath_context == NULL) {
 		fprintf(stderr, "Error: unable to create XPath context\n");
-		xmlFreeDoc(xml_doc);
 		return NULL;
 	}
 
@@ -526,7 +581,6 @@ eval_xpath_expr(xmlDocPtr xml_doc, const xmlChar *expression) {
 	if (xmlXPathRegisterNs(xpath_context, BAD_CAST XHTML_PREFIX, BAD_CAST XHTML_HREF) != 0) {
 		fprintf(stderr, "Error: unable to register XML namespace\n");
 		xmlXPathFreeContext(xpath_context);
-		xmlFreeDoc(xml_doc);
 		return NULL;
 	}
 
@@ -535,7 +589,6 @@ eval_xpath_expr(xmlDocPtr xml_doc, const xmlChar *expression) {
 	if (xpath_object == NULL) {
 		fprintf(stderr, "Error: unable to evaluate XPath expression\n");
 		xmlXPathFreeContext(xpath_context);
-		xmlFreeDoc(xml_doc);
 		return NULL;
 	}
 
@@ -654,9 +707,10 @@ b64_decode(char *src) {
 	unsigned char in[4];
 	char *p, *dst;
 
-	dst_len = (strlen(src) / 4) * 3 + 1;
-	dst = (char *)malloc(dst_len);
+	dst_len = (strlen(src) / 4) * 3;
+	dst = (char *)malloc(dst_len + 1);
 	dst[0] = '\0';
+	dst[dst_len] = '\0';
 
 	phase = 0;
 	i = 0;
