@@ -1,11 +1,22 @@
 /*
- * wb.c
- * A wallbase.cc image dowloader
+ * wb.c - A wallbase.cc image downloader
  *
- * By Mantas Norvaiša, 2013
- * Uses cURL, libTidy and libxml2
+ * Copyright (C) 2013 Mantas Norvaiša
  *
- * http://github.com/mntnorv/
+ * This file is part of wb.c.
+ * 
+ * wb.c is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * wb.c is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with wb.c.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
@@ -119,7 +130,12 @@ char *b64_decode(char *src);
  * argp global constants
  **************************************************/
 
-const char *argp_program_version = VERSION;
+const char *argp_program_version =
+"wb.c, version 0.1\nCopyrght (C) 2013 Mantas Norvaiša\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.";
+
 const char *argp_program_bug_address = "<mntnorv+bugs@gmail.com>";
 
 /*static char args_doc[] = "";*/
@@ -163,6 +179,8 @@ main(int argc, char* argv[]) {
 	struct options options;
 
 	/* Set default options */
+	options.username = "";
+	options.password = "";
 	options.dir = ".";
 	options.images = 20;
 	options.images_per_page = 20;
@@ -396,7 +414,8 @@ wb_get_image_url(const char *url, struct curl_slist *cookies) {
 	result_nodes = img_xpath_object->nodesetval;
 	result_node_count = (result_nodes) ? result_nodes->nodeNr : 0;
 	if (result_node_count != 1) {
-		fprintf(stderr, "Error: failed fetching encoded image url\n");
+		/* Not really an error, 99% of the time this is the fault of wallbase.cc */
+		/* fprintf(stderr, "Error: failed fetching encoded image url\n"); */
 		xmlXPathFreeObject(img_xpath_object);
 		xmlFreeDoc(xml_doc);
 		return NULL;
