@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-#include <getopt.h>
+#include <argp.h>
 
 #include <curl/curl.h>
 
@@ -58,27 +58,13 @@
 #define WB_PURITY_SFW         0x01
 #define WB_PURITY_SKETCHY     0x02
 #define WB_PURITY_NSFW        0x04
+#define WB_PURITY_ALL         0x07
 
 /* wallbase.cc wallpaper boards */
 #define WB_BOARD_GENERAL      0x01
 #define WB_BOARD_ANIME        0x02
 #define WB_BOARD_HIGHRES      0x04
-
-/**************************************************
- * Global constants
- **************************************************/
-
-static const char *URL_LOGIN = "http://wallbase.cc/user/login";
-static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
-
-static const char *FORMAT_LOGIN = "usrname=%s&pass=%s&nopass_email=Type+in+your+e-mail+and+press+enter&nopass=0&1=1";
-
-static const char *XHTML_PREFIX = "xhtml";
-static const char *XHTML_HREF = "http://www.w3.org/1999/xhtml";
-static const char *XPATH_IMAGE_PAGE_URL = "//xhtml:div[contains(@class,'thumb')]/xhtml:a[@class='thdraggable thlink']";
-static const char *XPATH_IMAGE_URL = "//xhtml:div[@id='bigwall']/xhtml:script";
-
-static const char *BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+#define WB_BOARD_ALL          0x07
 
 /**************************************************
  * Structs
@@ -111,8 +97,7 @@ struct curl_slist *wb_get_image_page_urls(const char *url, const char *post_data
 struct curl_slist *wb_get_image_urls(const char *url, const char *post_data, struct curl_slist *cookies);
 char *wb_get_image_url(const char *url, struct curl_slist *cookies);
 
-struct options *parse_args(int argc, char *argv[]);
-void print_usage();
+static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 char *curl_get_response(const char *url, const char *post_data, struct curl_slist **cookies, int update_cookies);
 int curl_connect(const char *url, const char *post_data, struct curl_slist **cookies, int update_cookies);
@@ -131,6 +116,41 @@ void b64_decodeblock(unsigned char in[], char *clrstr);
 char *b64_decode(char *src);
 
 /**************************************************
+ * argp global constants
+ **************************************************/
+
+const char *argp_program_version = VERSION;
+const char *argp_program_bug_address = "<mntnorv+bugs@gmail.com>";
+
+/*static char args_doc[] = "";*/
+static char doc[] =
+"wb -- A wallbase.cc image downloader";
+
+static struct argp_option argp_options[] = {
+	{"username", 'u', "USERNAME", 0, "wallbase.cc username, required for NSFW content"},
+	{"password", 'p', "PASSWORD", 0, "wallbase.cc password, required for NSFW content"},
+	{0}
+};
+
+static struct argp argp = {argp_options, parse_opt, NULL, doc};
+
+/**************************************************
+ * General global constants
+ **************************************************/
+
+static const char *URL_LOGIN = "http://wallbase.cc/user/login";
+static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
+
+static const char *FORMAT_LOGIN = "usrname=%s&pass=%s&nopass_email=Type+in+your+e-mail+and+press+enter&nopass=0&1=1";
+
+static const char *XHTML_PREFIX = "xhtml";
+static const char *XHTML_HREF = "http://www.w3.org/1999/xhtml";
+static const char *XPATH_IMAGE_PAGE_URL = "//xhtml:div[contains(@class,'thumb')]/xhtml:a[@class='thdraggable thlink']";
+static const char *XPATH_IMAGE_URL = "//xhtml:div[@id='bigwall']/xhtml:script";
+
+static const char *BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**************************************************
  * Main
  **************************************************/
 
@@ -140,15 +160,28 @@ main(int argc, char* argv[]) {
 	struct curl_slist *cookies = NULL;
 	struct curl_slist *image_urls = NULL;
 	struct curl_slist *img_url;
+	struct options options;
 
-	parse_args(argc, argv);
+	/* Set default options */
+	options.dir = ".";
+	options.images = 20;
+	options.images_per_page = 20;
+	options.flags = 0;
+	options.purity = WB_PURITY_ALL;
+	options.boards = WB_BOARD_ALL;
+	options.res_opt = WB_RES_AT_LEAST;
+	options.sort_by = WB_SORT_RELEVANCE;
+	options.sort_order = WB_SORT_DESCENDING;
+
+	/* Parse arguments */
+	argp_parse(&argp, argc, argv, 0, 0, &options);
 
 	/* Init */
 	curl_global_init(CURL_GLOBAL_ALL);
 	xmlInitParser();
 
 	/* Main operation */
-	cookies = wb_login("", "");
+	cookies = wb_login(options.username, options.password);
 	if (cookies == NULL) {
 		curl_global_cleanup();
 		xmlCleanupParser();
@@ -396,25 +429,34 @@ wb_get_image_url(const char *url, struct curl_slist *cookies) {
  **************************************************/
 
 /**
- * Parses command line arguments.
+ * Parses one argp option.
  *
- * @param argc - number of arguments
- * @param argv - array of arguments
- * @return a struct containing parsed options
+ * @param key - option key
+ * @param arg - the argument of this option
+ * @param state - current argp state
+ * @return 0 on success, an argp error code otherwise.
  */
-struct options *
-parse_args(int argc, char *argv[]) {
-	struct options *opts = (struct options *) malloc(sizeof(struct options));
+static error_t
+parse_opt(int key, char *arg, struct argp_state *state) {
+	struct options *options = state->input;
 
-	return opts;
-}
+	switch(key) {
+		case 'p':
+			options->password = arg;
+			break;
+		case 'u':
+			options->username = arg;
+			break;
+		case ARGP_KEY_ARG:
+			argp_usage(state);
+			break;
+		case ARGP_KEY_END:
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+	}
 
-/**
- * Prints the help text to stdout.
- */
-void
-print_usage() {
-	
+	return 0;
 }
 
 /**
