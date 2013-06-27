@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include <getopt.h>
+
 #include <curl/curl.h>
 
 #include <tidy.h>
@@ -23,6 +25,44 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+
+/**************************************************
+ * Defines
+ **************************************************/
+
+/* Search types */
+#define WB_TYPE_SEARCH        1
+#define WB_TYPE_TOPLIST       2
+#define WB_TYPE_COLOR         3
+#define WB_TYPE_RANDOM        4
+
+/* Sort types */
+#define WB_SORT_RELEVANCE     1
+#define WB_SORT_VIEWS         2
+#define WB_SORT_DATE          3
+#define WB_SORT_FAVORITES     4
+
+/* Sort orders */
+#define WB_SORT_ASCENDING     0
+#define WB_SORT_DESCENDING    1
+
+/* Resolution options */
+#define WB_RES_EXACTLY        0
+#define WB_RES_AT_LEAST       1
+
+/* Flags */
+#define WB_FLAG_DONT_DOWNLOAD 0x01
+#define WB_FLAG_LEAVE_OLD     0x02
+
+/* wallbase.cc purities */
+#define WB_PURITY_SFW         0x01
+#define WB_PURITY_SKETCHY     0x02
+#define WB_PURITY_NSFW        0x04
+
+/* wallbase.cc wallpaper boards */
+#define WB_BOARD_GENERAL      0x01
+#define WB_BOARD_ANIME        0x02
+#define WB_BOARD_HIGHRES      0x04
 
 /**************************************************
  * Global constants
@@ -49,6 +89,19 @@ struct curl_response {
 	char *data;
 };
 
+struct options {
+	char *username, *password;
+	unsigned char search_type;
+	char *dir;
+	char *query;
+	int color;
+	int images, images_per_page;
+	unsigned char flags, purity, boards;
+	int res_x, res_y;
+	unsigned char res_opt;
+	unsigned char sort_by, sort_order;
+};
+
 /**************************************************
  * Function declarations
  **************************************************/
@@ -57,6 +110,9 @@ struct curl_slist *wb_login(const char *username, const char *password);
 struct curl_slist *wb_get_image_page_urls(const char *url, const char *post_data, struct curl_slist *cookies);
 struct curl_slist *wb_get_image_urls(const char *url, const char *post_data, struct curl_slist *cookies);
 char *wb_get_image_url(const char *url, struct curl_slist *cookies);
+
+struct options *parse_args(int argc, char *argv[]);
+void print_usage();
 
 char *curl_get_response(const char *url, const char *post_data, struct curl_slist **cookies, int update_cookies);
 int curl_connect(const char *url, const char *post_data, struct curl_slist **cookies, int update_cookies);
@@ -84,6 +140,8 @@ main(int argc, char* argv[]) {
 	struct curl_slist *cookies = NULL;
 	struct curl_slist *image_urls = NULL;
 	struct curl_slist *img_url;
+
+	parse_args(argc, argv);
 
 	/* Init */
 	curl_global_init(CURL_GLOBAL_ALL);
@@ -336,6 +394,28 @@ wb_get_image_url(const char *url, struct curl_slist *cookies) {
 /**************************************************
  * Helper function implementations
  **************************************************/
+
+/**
+ * Parses command line arguments.
+ *
+ * @param argc - number of arguments
+ * @param argv - array of arguments
+ * @return a struct containing parsed options
+ */
+struct options *
+parse_args(int argc, char *argv[]) {
+	struct options *opts = (struct options *) malloc(sizeof(struct options));
+
+	return opts;
+}
+
+/**
+ * Prints the help text to stdout.
+ */
+void
+print_usage() {
+	
+}
 
 /**
  * Connects to URL with a GET or POST request and returns
