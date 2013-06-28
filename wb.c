@@ -497,15 +497,101 @@ wb_get_image_url(const char *url, struct curl_slist *cookies) {
 static error_t
 parse_opt(int key, char *arg, struct argp_state *state) {
 	struct options *options = state->input;
+	int num;
+	char *temp_arg, *num_end;
 
 	switch(key) {
-		case 'p':
+		case 'a': /* aspect ratio */
+			temp_arg = arg;
+
+			/* Try to read the first number (before ':') */
+			num = strtol(temp_arg, &num_end, 10);
+			if (num <= 0) {
+				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+			} else {
+				options->aspect_ratio = num;
+				temp_arg = num_end;
+			}
+
+			/* Check for a ':' between numbers */
+			if (temp_arg[0] != ':') {
+				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+			} else {
+				temp_arg++;
+			}
+
+			/* Try to read the second number */
+			num = strtol(temp_arg, &num_end, 10);
+			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
+				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+			} else {
+				options->aspect_ratio = options->aspect_ratio / num;
+			}
+
+			break;
+		case 'c': /* color */
+			num = strtol(arg, &num_end, 16);
+			if (arg + strlen(arg) != num_end || num < 0 || num > 0xFFFFFF) {
+				argp_error(state, "`%s' is not a valid color.", arg);
+			} else {
+				options->color = num;
+			}
+			break;
+		case 'd': /* download dir */
+			options->dir = arg;
+			break;
+		case 'n': /* number of images */
+			num = strtol(arg, &num_end, 10);
+			if (arg + strlen(arg) != num_end || num <= 0) {
+				argp_error(state, "`%s' is not a valid number of images.", arg);
+			} else {
+				options->images = num;
+			}
+			break;
+		case 'p': /* password */
 			options->password = arg;
 			break;
-		case 'u':
+		case 'q': /* query string */
+			options->query = arg;
+			break;
+		case 'r': /* resolution */
+			temp_arg = arg;
+
+			/* If starts with '=' search for the exact resolution */
+			if (temp_arg[0] == '=') {
+				options->res_opt = WB_RES_EXACTLY;
+				temp_arg++;
+			}
+
+			/* Try to read the X resolution */
+			num = strtol(temp_arg, &num_end, 10);
+			if (num <= 0) {
+				argp_error(state, "`%s' is not a valid resolution.", arg);
+			} else {
+				options->res_x = num;
+				temp_arg = num_end;
+			}
+
+			/* Check if there's an 'x' between the numbers */
+			if (temp_arg[0] != 'x') {
+				argp_error(state, "`%s' is not a valid resolution.", arg);
+			} else {
+				temp_arg++;
+			}
+
+			/* Try to read the Y resolution */
+			num = strtol(temp_arg, &num_end, 10);
+			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
+				argp_error(state, "`%s' is not a valid resolution.", arg);
+			} else {
+				options->res_y = num;
+			}
+
+			break;
+		case 'u': /* username */
 			options->username = arg;
 			break;
-		case ARGP_KEY_ARG:
+		case ARGP_KEY_ARG: /* non-option arguments */
 			argp_usage(state);
 			break;
 		case ARGP_KEY_END:
