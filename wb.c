@@ -42,40 +42,43 @@
  **************************************************/
 
 /* Search types */
-#define WB_TYPE_SEARCH        1
-#define WB_TYPE_TOPLIST       2
-#define WB_TYPE_COLOR         3
-#define WB_TYPE_RANDOM        4
+#define WB_TYPE_SEARCH         1
+#define WB_TYPE_TOPLIST        2
+#define WB_TYPE_COLOR          3
+#define WB_TYPE_RANDOM         4
 
 /* Sort types */
-#define WB_SORT_RELEVANCE     1
-#define WB_SORT_VIEWS         2
-#define WB_SORT_DATE          3
-#define WB_SORT_FAVORITES     4
+#define WB_SORT_RELEVANCE      1
+#define WB_SORT_VIEWS          2
+#define WB_SORT_DATE           3
+#define WB_SORT_FAVORITES      4
 
 /* Sort orders */
-#define WB_SORT_ASCENDING     0
-#define WB_SORT_DESCENDING    1
+#define WB_SORT_ASCENDING      0
+#define WB_SORT_DESCENDING     1
 
 /* Resolution options */
-#define WB_RES_EXACTLY        0
-#define WB_RES_AT_LEAST       1
+#define WB_RES_EXACTLY         0
+#define WB_RES_AT_LEAST        1
 
 /* Flags */
-#define WB_FLAG_DONT_DOWNLOAD 0x01
-#define WB_FLAG_LEAVE_OLD     0x02
+#define WB_FLAG_PRINT_ONLY  0x01
 
 /* wallbase.cc purities */
-#define WB_PURITY_SFW         0x01
-#define WB_PURITY_SKETCHY     0x02
-#define WB_PURITY_NSFW        0x04
-#define WB_PURITY_ALL         0x07
+#define WB_PURITY_SFW       0x01
+#define WB_PURITY_SKETCHY   0x02
+#define WB_PURITY_NSFW      0x04
+#define WB_PURITY_ALL       0x07
 
 /* wallbase.cc wallpaper boards */
-#define WB_BOARD_GENERAL      0x01
-#define WB_BOARD_ANIME        0x02
-#define WB_BOARD_HIGHRES      0x04
-#define WB_BOARD_ALL          0x07
+#define WB_BOARD_GENERAL    0x01
+#define WB_BOARD_ANIME      0x02
+#define WB_BOARD_HIGHRES    0x04
+#define WB_BOARD_ALL        0x07
+
+/* ARGP option keys */
+#define WB_KEY_PRINT_ONLY    300
+#define WB_KEY_MANGA         301
 
 /**************************************************
  * Structs
@@ -91,11 +94,13 @@ struct options {
 	unsigned char search_type;
 	char *dir;
 	char *query;
+	char *toplist_interval;
 	int color;
 	int images, images_per_page;
 	unsigned char flags, purity, boards;
 	int res_x, res_y;
 	unsigned char res_opt;
+	float aspect_ratio;
 	unsigned char sort_by, sort_order;
 };
 
@@ -131,20 +136,51 @@ char *b64_decode(char *src);
  **************************************************/
 
 const char *argp_program_version =
-"wb.c, version 0.1\nCopyrght (C) 2013 Mantas Norvaiša\n\
+"wb.c, version 0.1\nCopyright (C) 2013 Mantas Norvaiša\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.";
 
 const char *argp_program_bug_address = "<mntnorv+bugs@gmail.com>";
 
-/*static char args_doc[] = "";*/
 static char doc[] =
 "wb -- A wallbase.cc image downloader";
 
 static struct argp_option argp_options[] = {
-	{"username", 'u', "USERNAME", 0, "wallbase.cc username, required for NSFW content"},
-	{"password", 'p', "PASSWORD", 0, "wallbase.cc password, required for NSFW content"},
+	/* Options with arguments */
+	{"username",     'u', "USERNAME", 0,
+	"wallbase.cc username, required for NSFW content"},
+	{"password",     'p', "PASSWORD", 0,
+	"wallbase.cc password, required for NSFW content"},
+	{"download-dir", 'd', "DIR",      0,
+	"Directory to download images to (defaults to current directory)"},
+	{"images",       'n', "COUNT",    0,
+	"Number of images to download"},
+	{"query",        'q', "STRING",   0,
+	"Search for images related to this string"},
+	{"toplist",      't', "INTERVAL", 0,
+	"Get the top images in the specified time interval"},
+	{"color",        'c', "COLOR",    0,
+	"Search for images containing this color"},
+	{"resolution",   'r', "RES",      0,
+	"Search for images with at least or exactly this resolution"},
+	{"aspect",       'a', "ASPECT",   0,
+	"Search for images with this aspect ratio"},
+	{"sort",         's', "SORT",     0,
+	"Specify the sort order"},
+
+	/* Options without arguments */
+	{"sfw",      'S', 0, 0, "Search for SFW images"},
+	{"sketchy",  'K', 0, 0, "Search for sketchy images"},
+	{"nsfw",     'N', 0, 0, "Search for NSFW images (requires wallbase.cc login information)"},
+	{"general",  'G', 0, 0, "Search in the Wallpapers / General board"},
+	{"anime",    'A', 0, 0, "Search in the Anime / Manga board"},
+	{"manga",     WB_KEY_MANGA, 0, OPTION_ALIAS},
+	{"high-res", 'H', 0, 0, "Search in the High Resolution board"},
+
+	/* Long-only options */
+	{"print-only", WB_KEY_PRINT_ONLY, 0, 0,
+	"Print image URLs to stdout (do not download images)"},
 	{0}
 };
 
@@ -187,7 +223,10 @@ main(int argc, char* argv[]) {
 	options.flags = 0;
 	options.purity = WB_PURITY_ALL;
 	options.boards = WB_BOARD_ALL;
+	options.res_x = 0;
+	options.res_y = 0;
 	options.res_opt = WB_RES_AT_LEAST;
+	options.aspect_ratio = 0;
 	options.sort_by = WB_SORT_RELEVANCE;
 	options.sort_order = WB_SORT_DESCENDING;
 
