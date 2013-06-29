@@ -30,10 +30,10 @@ CFLAGS = -g -Wall -Werror -pedantic $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
 
 # Compiler
-CC = gcc
+CC = clang
 
 # Filenames
-SOURCES = wb.c
+SOURCES = wb.c args.c base64.c net.c str_list.c url_enc.c xml.c xpath.c
 OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = wb
 ADDITIONAL_FILES = Makefile README.md COPYING
