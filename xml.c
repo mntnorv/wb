@@ -19,6 +19,7 @@
  * along with wb.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <errno.h>
 #include <tidy.h>
 #include <buffio.h>
 
@@ -37,10 +38,8 @@
 char *
 convert_html_to_xml(const char *html) {
 	TidyDoc document;
-	TidyBuffer doc_buffer = {0};
-	TidyBuffer tidy_err_buffer = {0};
-	TidyBuffer output_buffer = {0};
 	int res;
+	unsigned int xml_buffer_size;
 	char *xml;
 
 	/* Set up the tidy parser */
@@ -49,39 +48,34 @@ convert_html_to_xml(const char *html) {
 	tidyOptSetBool(document, TidyXmlOut, yes);
 	tidyOptSetBool(document, TidyNumEntities, yes);
 	tidyOptSetInt(document, TidyWrapLen, 4096);
+	tidyOptSetInt(document, TidyShowErrors, 0);
 	tidyOptSetInt(document, TidyDoctypeMode, TidyDoctypeOmit);
-	tidySetErrorBuffer(document, &tidy_err_buffer);
-	tidyBufInit(&doc_buffer);
-
-	tidyBufAppend(&doc_buffer, (void *) html, strlen(html));
 
 	/* Parse HTML, repair it, and convert to XML */
-	res = tidyParseBuffer(document, &doc_buffer);
+	res = tidyParseString(document, html);
 	if (res >= 0) {
 		res = tidyCleanAndRepair(document);
-		if (res >= 0) {
-			res = tidySaveBuffer(document, &output_buffer);
-			if (res >= 0) {
-				xml = (char *) malloc(output_buffer.size + 1);
-				memcpy(xml, output_buffer.bp, output_buffer.size);
-				xml[output_buffer.size] = '\0';
-			}
-			tidyBufFree(&output_buffer);
+	}
+
+	if (res >= 0) {
+		xml_buffer_size = 0;
+		xml = (char *) malloc(1);
+
+		while ((res = tidySaveString(document, xml, &xml_buffer_size)) == -ENOMEM) {
+			xml = realloc(xml, xml_buffer_size + 1);
 		}
+
+		xml[xml_buffer_size] = '\0';
 	}
 
 	/* Check for errors */
 	if (res < 0) {
-		tidyBufFree(&doc_buffer);
-		tidyBufFree(&tidy_err_buffer);
 		tidyRelease(document);
 		free(xml);
 		return NULL;
 	}
 
 	/* Clean up */
-	tidyBufFree(&doc_buffer);
-	tidyBufFree(&tidy_err_buffer);
 	tidyRelease(document);
 
 	return xml;
