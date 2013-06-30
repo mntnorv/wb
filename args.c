@@ -21,87 +21,145 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <argp.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <getopt.h>
 
 #include "args.h"
+#include "error.h"
 #include "types.h"
 
 /**************************************************
- * Function declarations
+ * Constants
  **************************************************/
 
-static error_t parse_opt(int key, char *arg, struct argp_state *state);
+const char ABOUT[] = "wb -- A wallbase.cc image downloader";
+const char *BUG_ADDRESS = "<mntnorv+bugs@gmail.com>";
 
-/**************************************************
- * argp constants
- **************************************************/
+const char *SHORT_USAGE = "Usage: wb [OPTION...]";
+const char *LONG_USAGE = "\
+Usage: wb [-AGHKNShV] [-a ASPECT] [-c COLOR] [-d DIR] [-n COUNT] [-p PASSWORD]\n\
+            [-q STRING] [-r RES] [-s SORT] [-t INTERVAL] [-u USERNAME]";
 
-const char *argp_program_version =
-"wb, version 0.1\nCopyright (C) 2013 Mantas Norvaiša\n\
+const char *SHORT_HELP = "Try `wb --help' or `wb --usage' for more information.";
+const char *LONG_HELP = "\
+  -a, --aspect=ASPECT        Search for images with this aspect ratio\n\
+  -A, --anime, --manga       Search in the Anime / Manga board\n\
+  -c, --color=COLOR          Search for images containing this color\n\
+  -d, --download-dir=DIR     Directory to download images to (defaults to\n\
+                             current directory)\n\
+  -G, --general              Search in the Wallpapers / General board\n\
+  -H, --high-res             Search in the High Resolution board\n\
+  -K, --sketchy              Search for sketchy images\n\
+  -n, --images=COUNT         Number of images to download\n\
+  -N, --nsfw                 Search for NSFW images (requires wallbase.cc login\n\
+                             information)\n\
+  -p, --password=PASSWORD    wallbase.cc password, required for NSFW content\n\
+      --print-only           Print image URLs to stdout (do not download\n\
+                             images)\n\
+  -q, --query=STRING         Search for images related to this string\n\
+  -r, --resolution=RES       Search for images with at least or exactly this\n\
+                             resolution\n\
+  -s, --sort=SORT            Specify the sort order\n\
+  -S, --sfw                  Search for SFW images\n\
+  -t, --toplist=INTERVAL     Get the top images in the specified time interval\n\
+  -u, --username=USERNAME    wallbase.cc username, required for NSFW content\n\
+  -h, --help                 Give this help list\n\
+      --usage                Give a short usage message\n\
+  -V, --version              Print program version\n\
+\n\
+Mandatory or optional arguments to long options are also mandatory or optional\n\
+for any corresponding short options.";
+
+const char *FORMAT_VERSION = "\
+wb, version %s\nCopyright (C) 2013 Mantas Norvaiša\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.";
+There is NO WARRANTY, to the extent permitted by law.\n";
 
-const char *argp_program_bug_address = "<mntnorv+bugs@gmail.com>";
+const char *FORMAT_FULL_HELP = "%s\n%s\n\n%s\n\nReport bugs to %s\n";
 
-static char doc[] =
-"wb -- A wallbase.cc image downloader";
-
-static struct argp_option argp_options[] = {
+static const char *GETOPT_SHORT_OPTIONS = "a:c:d:n:p:q:r:s:t:u:AGHKNShV";
+static struct option GETOPT_LONG_OPTIONS[] = {
 	/* Options with arguments */
-	{"username",     'u', "USERNAME", 0,
-	"wallbase.cc username, required for NSFW content"},
-	{"password",     'p', "PASSWORD", 0,
-	"wallbase.cc password, required for NSFW content"},
-	{"download-dir", 'd', "DIR",      0,
-	"Directory to download images to (defaults to current directory)"},
-	{"images",       'n', "COUNT",    0,
-	"Number of images to download"},
-	{"query",        'q', "STRING",   0,
-	"Search for images related to this string"},
-	{"toplist",      't', "INTERVAL", 0,
-	"Get the top images in the specified time interval"},
-	{"color",        'c', "COLOR",    0,
-	"Search for images containing this color"},
-	{"resolution",   'r', "RES",      0,
-	"Search for images with at least or exactly this resolution"},
-	{"aspect",       'a', "ASPECT",   0,
-	"Search for images with this aspect ratio"},
-	{"sort",         's', "SORT",     0,
-	"Specify the sort order"},
+	{"aspect",       required_argument, 0, 'a'},
+	{"color",        required_argument, 0, 'c'},
+	{"download-dir", required_argument, 0, 'd'},
+	{"images",       required_argument, 0, 'n'},
+	{"password",     required_argument, 0, 'p'},
+	{"query",        required_argument, 0, 'q'},
+	{"resolution",   required_argument, 0, 'r'},
+	{"sort",         required_argument, 0, 's'},
+	{"toplist",      required_argument, 0, 't'},
+	{"username",     required_argument, 0, 'u'},
 
 	/* Options without arguments */
-	{"sfw",      'S', 0, 0, "Search for SFW images"},
-	{"sketchy",  'K', 0, 0, "Search for sketchy images"},
-	{"nsfw",     'N', 0, 0, "Search for NSFW images (requires wallbase.cc login information)"},
-	{"general",  'G', 0, 0, "Search in the Wallpapers / General board"},
-	{"anime",    'A', 0, 0, "Search in the Anime / Manga board"},
-	{"manga",     WB_KEY_MANGA, 0, OPTION_ALIAS},
-	{"high-res", 'H', 0, 0, "Search in the High Resolution board"},
+	{"anime",        no_argument,       0, 'A'},
+	{"manga",        no_argument,       0, 'A'},
+	{"general",      no_argument,       0, 'G'},
+	{"high-res",     no_argument,       0, 'H'},
+	{"sketchy",      no_argument,       0, 'K'},
+	{"nsfw",         no_argument,       0, 'N'},
+	{"sfw",          no_argument,       0, 'S'},
+	{"help",         no_argument,       0, 'h'},
+	{"version",      no_argument,       0, 'V'},
 
 	/* Long-only options */
-	{"print-only", WB_KEY_PRINT_ONLY, 0, 0,
-	"Print image URLs to stdout (do not download images)"},
+	{"usage",        no_argument,       0, WB_KEY_USAGE},
+	{"print-only",   no_argument,       0, WB_KEY_PRINT_ONLY},
 	{0}
 };
-
-static struct argp argp = {argp_options, parse_opt, NULL, doc};
 
 /**************************************************
  * Function implementations
  **************************************************/
 
 /**
+ * Prints an invalid argument error.
+ *
+ * @param name - argument name
+ * @param arg - the argument itself
+ */
+void
+invalid_arg_error(char *name, char *arg) {
+	wb_error("invalid %s -- '%s'\n%s\n", name, arg, SHORT_HELP);
+}
+
+/**
+ * Prints the full help.
+ */
+void
+print_full_help() {
+	printf(FORMAT_FULL_HELP, SHORT_USAGE, ABOUT, LONG_HELP, BUG_ADDRESS);
+}
+
+/**
+ * Prints the full usage info.
+ */
+void
+print_full_usage() {
+	printf("%s\n", LONG_USAGE);
+}
+
+/**
+ * Prints version info.
+ */
+void
+print_version() {
+	printf(FORMAT_VERSION, VERSION);
+}
+
+/**
  * Parses one argp option.
  *
  * @param key - option key
  * @param arg - the argument of this option
- * @param state - current argp state
- * @return 0 on success, an argp error code otherwise.
+ * @param options - a pointer to the options struct
+ * @return 0 when the parsing should continue, -1 when the parsing
+ *   should be stopped.
  */
-static error_t
-parse_opt(int key, char *arg, struct argp_state *state) {
-	struct options *options = state->input;
+int
+parse_opt(int key, char *arg, struct options *options) {
 	int num;
 	char *temp_arg, *num_end;
 
@@ -112,7 +170,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 			/* Try to read the first number (before ':') */
 			num = strtol(temp_arg, &num_end, 10);
 			if (num <= 0) {
-				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+				invalid_arg_error("aspect ratio", arg);
+				return -1;
 			} else {
 				options->aspect_ratio = num;
 				temp_arg = num_end;
@@ -120,7 +179,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 
 			/* Check for a ':' between numbers */
 			if (temp_arg[0] != ':') {
-				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+				invalid_arg_error("aspect ratio", arg);
+				return -1;
 			} else {
 				temp_arg++;
 			}
@@ -128,7 +188,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 			/* Try to read the second number */
 			num = strtol(temp_arg, &num_end, 10);
 			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
-				argp_error(state, "`%s' is not a valid aspect ratio.", arg);
+				invalid_arg_error("aspect ratio", arg);
+				return -1;
 			} else {
 				options->aspect_ratio = options->aspect_ratio / num;
 			}
@@ -137,7 +198,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 		case 'c': /* color */
 			num = strtol(arg, &num_end, 16);
 			if (arg + strlen(arg) != num_end || num < 0 || num > 0xFFFFFF) {
-				argp_error(state, "`%s' is not a valid color.", arg);
+				invalid_arg_error("color", arg);
+				return -1;
 			} else {
 				options->color = num;
 			}
@@ -148,7 +210,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 		case 'n': /* number of images */
 			num = strtol(arg, &num_end, 10);
 			if (arg + strlen(arg) != num_end || num <= 0) {
-				argp_error(state, "`%s' is not a valid number of images.", arg);
+				invalid_arg_error("number of images", arg);
+				return -1;
 			} else {
 				options->images = num;
 			}
@@ -171,7 +234,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 			/* Try to read the X resolution */
 			num = strtol(temp_arg, &num_end, 10);
 			if (num <= 0) {
-				argp_error(state, "`%s' is not a valid resolution.", arg);
+				invalid_arg_error("resolution", arg);
+				return -1;
 			} else {
 				options->res_x = num;
 				temp_arg = num_end;
@@ -179,7 +243,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 
 			/* Check if there's an 'x' between the numbers */
 			if (temp_arg[0] != 'x') {
-				argp_error(state, "`%s' is not a valid resolution.", arg);
+				invalid_arg_error("resolution", arg);
+				return -1;
 			} else {
 				temp_arg++;
 			}
@@ -187,7 +252,8 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 			/* Try to read the Y resolution */
 			num = strtol(temp_arg, &num_end, 10);
 			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
-				argp_error(state, "`%s' is not a valid resolution.", arg);
+				invalid_arg_error("resolution", arg);
+				return -1;
 			} else {
 				options->res_y = num;
 			}
@@ -196,13 +262,20 @@ parse_opt(int key, char *arg, struct argp_state *state) {
 		case 'u': /* username */
 			options->username = arg;
 			break;
-		case ARGP_KEY_ARG: /* non-option arguments */
-			argp_usage(state);
-			break;
-		case ARGP_KEY_END:
-			break;
+		case 'h': /* help */
+			print_full_help();
+			return -1;
+		case 'V': /* version */
+			print_version();
+			return -1;
+		case WB_KEY_USAGE: /* usage */
+			print_full_usage();
+			return -1;
+		case '?': /* getopt error */ 
+			fprintf(stderr, "%s\n", SHORT_HELP);
+			return -1;
 		default:
-			return ARGP_ERR_UNKNOWN;
+			return -1;
 	}
 
 	return 0;
@@ -219,5 +292,13 @@ parse_opt(int key, char *arg, struct argp_state *state) {
  */
 void
 wb_parse_args(int argc, char *argv[], struct options *options) {
-	argp_parse(&argp, argc, argv, 0, 0, options);
+	int key, option_index;
+	
+	while ((key = getopt_long(argc, argv, GETOPT_SHORT_OPTIONS,
+		GETOPT_LONG_OPTIONS, &option_index)) != -1) {
+
+		if (parse_opt(key, optarg, options) != 0) {
+			exit(1);
+		}
+	}
 }

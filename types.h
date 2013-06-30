@@ -64,8 +64,8 @@
 #define WB_BOARD_ALL        0x07
 
 /* ARGP option keys */
-#define WB_KEY_PRINT_ONLY    300
-#define WB_KEY_MANGA         301
+#define WB_KEY_USAGE         300
+#define WB_KEY_PRINT_ONLY    301
 
 /**************************************************
  * Structs
