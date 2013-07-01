@@ -31,7 +31,36 @@
 #include "types.h"
 
 /**************************************************
- * Constants
+ * Constant arrays
+ **************************************************/
+
+/* Toplist intervals */
+static const char *WB_TOPLIST_INTERVALS[] = {
+	"0", "1d", "3d", "1w", "2w", "1m", "2m", "3m"
+};
+static const unsigned char WB_TOPLIST_INTERVAL_IDS[] = {
+	WB_TOPLIST_ALL_TIME, WB_TOPLIST_1D, WB_TOPLIST_3D,
+	WB_TOPLIST_1W, WB_TOPLIST_2W, WB_TOPLIST_1M, WB_TOPLIST_2M,
+	WB_TOPLIST_3M
+};
+
+#define WB_TOPLIST_INTERVALS_SIZE ARR_SIZE(WB_TOPLIST_INTERVALS)
+
+/* Sort types */
+static const char *WB_SORT_TYPES_SHORT[] = {
+	"r", "v", "d", "f"
+};
+static const char *WB_SORT_TYPES_LONG[] = {
+	"relevance", "views", "date", "favorites"
+};
+static const unsigned char WB_SORT_TYPE_IDS[] = {
+	WB_SORT_RELEVANCE, WB_SORT_VIEWS, WB_SORT_DATE, WB_SORT_FAVORITES
+};
+
+#define WB_SORT_TYPES_SIZE ARR_SIZE(WB_SORT_TYPE_IDS)
+
+/**************************************************
+ * Constant strings
  **************************************************/
 
 static char *APP_INVOKE_NAME = "wb";
@@ -164,6 +193,224 @@ print_version() {
 }
 
 /**
+ * Checks if a string is in an array
+ *
+ * @param str - the string to search for
+ * @param array - the array to search in
+ * @param arr_size - size of the array
+ * @return index of the string in the array if found, -1 otherwise
+ */
+int
+find_in_array(const char *str, const char *array[], int arr_size) {
+	int i;
+	for (i = 0; i < arr_size; i++) {
+		if (strcmp(str, array[i]) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+/**
+ * Parses the aspect ratio from a string.
+ *
+ * @param arg - a string containing the aspect ratio.
+ *   Format <number>:<number>.
+ * @param options - pointer to the options struct.
+ * @return 0 on success, -1 otherwise
+ */
+int
+parse_aspect_ratio(char *arg, struct options *options) {
+	int num;
+	char *temp_arg, *num_end;
+
+	temp_arg = arg;
+
+	/* Try to read the first number (before ':') */
+	num = strtol(temp_arg, &num_end, 10);
+	if (num <= 0) {
+		return -1;
+	} else {
+		options->aspect_ratio = num;
+		temp_arg = num_end;
+	}
+
+	/* Check for a ':' between numbers */
+	if (temp_arg[0] != ':') {
+		return -1;
+	} else {
+		temp_arg++;
+	}
+
+	/* Try to read the second number */
+	num = strtol(temp_arg, &num_end, 10);
+	if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
+		return -1;
+	} else {
+		options->aspect_ratio = options->aspect_ratio / num;
+	}
+
+	return 0;
+}
+
+/**
+ * Parses a color from a string.
+ *
+ * @param arg - a string containing a color. The color must be
+ *   represented as a 24-bit hexadecimal number. The '0x' prefix
+ *   is optional.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_color(char *arg, struct options *options) {
+	int num;
+	char *num_end;
+
+	num = strtol(arg, &num_end, 16);
+	if (arg + strlen(arg) != num_end || num < 0 || num > 0xFFFFFF) {
+		return -1;
+	} else {
+		options->color = num;
+	}
+
+	return 0;
+}
+
+/**
+ * Parses the number of images from a string.
+ *
+ * @param arg - a string containing a number. The number must
+ *   be greater than 0.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_image_number(char *arg, struct options *options) {
+	int num;
+	char *num_end;
+
+	num = strtol(arg, &num_end, 10);
+	if (arg + strlen(arg) != num_end || num <= 0) {
+		return -1;
+	} else {
+		options->images = num;
+	}
+
+	return 0;
+}
+
+/**
+ * Parses a resolution from a string.
+ *
+ * @param arg - a string containing a resolution.
+ *   Format [=]<number>x<number>. The '=' is optional.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_resolution(char *arg, struct options *options) {
+	int num;
+	char *temp_arg, *num_end;
+
+	temp_arg = arg;
+
+	/* If starts with '=' search for the exact resolution */
+	if (temp_arg[0] == '=') {
+		options->res_opt = WB_RES_EXACTLY;
+		temp_arg++;
+	}
+
+	/* Try to read the X resolution */
+	num = strtol(temp_arg, &num_end, 10);
+	if (num <= 0) {
+		return -1;
+	} else {
+		options->res_x = num;
+		temp_arg = num_end;
+	}
+
+	/* Check if there's an 'x' between the numbers */
+	if (temp_arg[0] != 'x') {
+		return -1;
+	} else {
+		temp_arg++;
+	}
+
+	/* Try to read the Y resolution */
+	num = strtol(temp_arg, &num_end, 10);
+	if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
+		return -1;
+	} else {
+		options->res_y = num;
+	}
+
+	return 0;
+}
+
+/**
+ * Parses the sort type an order from a string.
+ *
+ * @param arg - a string containing a sort type and an optional
+ *   sort order.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_sort(char *arg, struct options *options) {
+	int index;
+	char *temp_arg;
+
+	temp_arg = arg;
+
+	/* Parse sort order if specified */
+	if (temp_arg[0] == '+') {
+		options->sort_order = WB_SORT_ASCENDING;
+		temp_arg++;
+	} else if (temp_arg[0] == '-') {
+		options->sort_order = WB_SORT_DESCENDING;
+		temp_arg++;
+	}
+
+	/* Check if specified sort type is in the short types array */
+	index = find_in_array(temp_arg, WB_SORT_TYPES_SHORT, WB_SORT_TYPES_SIZE);
+	if (index != -1) {
+		options->sort_by = WB_SORT_TYPE_IDS[index];
+		return 0;
+	}
+
+	/* Check if specified sort type is in the long types array */
+	index = find_in_array(temp_arg, WB_SORT_TYPES_LONG, WB_SORT_TYPES_SIZE);
+	if (index != -1) {
+		options->sort_by = WB_SORT_TYPE_IDS[index];
+		return 0;
+	}
+
+	return -1;
+}
+
+/**
+ * Parses the sort toplist interval from a string.
+ *
+ * @param arg - a string containing a toplist interval.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_toplist_interval(char *arg, struct options *options) {
+	int index;
+
+	/* Check if specified sort type is in the short types array */
+	index = find_in_array(arg, WB_TOPLIST_INTERVALS, WB_TOPLIST_INTERVALS_SIZE);
+	if (index != -1) {
+		options->toplist = WB_TOPLIST_INTERVAL_IDS[index];
+		return 0;
+	}
+
+	return -1;
+}
+
+/**
  * Parses one argp option.
  *
  * @param key - option key
@@ -174,60 +421,29 @@ print_version() {
  */
 int
 parse_opt(int key, char *arg, struct options *options) {
-	int num;
-	char *temp_arg, *num_end;
-
 	switch(key) {
+
+		/* Options with arguments */
+
 		case 'a': /* aspect ratio */
-			temp_arg = arg;
-
-			/* Try to read the first number (before ':') */
-			num = strtol(temp_arg, &num_end, 10);
-			if (num <= 0) {
+			if (parse_aspect_ratio(arg, options) == -1) {
 				invalid_arg_error("aspect ratio", arg);
 				return -1;
-			} else {
-				options->aspect_ratio = num;
-				temp_arg = num_end;
 			}
-
-			/* Check for a ':' between numbers */
-			if (temp_arg[0] != ':') {
-				invalid_arg_error("aspect ratio", arg);
-				return -1;
-			} else {
-				temp_arg++;
-			}
-
-			/* Try to read the second number */
-			num = strtol(temp_arg, &num_end, 10);
-			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
-				invalid_arg_error("aspect ratio", arg);
-				return -1;
-			} else {
-				options->aspect_ratio = options->aspect_ratio / num;
-			}
-
 			break;
 		case 'c': /* color */
-			num = strtol(arg, &num_end, 16);
-			if (arg + strlen(arg) != num_end || num < 0 || num > 0xFFFFFF) {
+			if (parse_color(arg, options) == -1) {
 				invalid_arg_error("color", arg);
 				return -1;
-			} else {
-				options->color = num;
 			}
 			break;
 		case 'd': /* download dir */
 			options->dir = arg;
 			break;
 		case 'n': /* number of images */
-			num = strtol(arg, &num_end, 10);
-			if (arg + strlen(arg) != num_end || num <= 0) {
+			if (parse_image_number(arg, options) == -1) {
 				invalid_arg_error("number of images", arg);
 				return -1;
-			} else {
-				options->images = num;
 			}
 			break;
 		case 'p': /* password */
@@ -237,45 +453,53 @@ parse_opt(int key, char *arg, struct options *options) {
 			options->query = arg;
 			break;
 		case 'r': /* resolution */
-			temp_arg = arg;
-
-			/* If starts with '=' search for the exact resolution */
-			if (temp_arg[0] == '=') {
-				options->res_opt = WB_RES_EXACTLY;
-				temp_arg++;
-			}
-
-			/* Try to read the X resolution */
-			num = strtol(temp_arg, &num_end, 10);
-			if (num <= 0) {
+			if (parse_resolution(arg, options) == -1) {
 				invalid_arg_error("resolution", arg);
 				return -1;
-			} else {
-				options->res_x = num;
-				temp_arg = num_end;
 			}
-
-			/* Check if there's an 'x' between the numbers */
-			if (temp_arg[0] != 'x') {
-				invalid_arg_error("resolution", arg);
+			break;
+		case 's': /* sort */
+			if (parse_sort(arg, options) == -1) {
+				invalid_arg_error("sort type", arg);
 				return -1;
-			} else {
-				temp_arg++;
 			}
-
-			/* Try to read the Y resolution */
-			num = strtol(temp_arg, &num_end, 10);
-			if (temp_arg + strlen(temp_arg) != num_end || num <= 0) {
-				invalid_arg_error("resolution", arg);
+			break;
+		case 't': /* toplist interval */
+			if (parse_toplist_interval(arg, options) == -1) {
+				invalid_arg_error("toplist interval", arg);
 				return -1;
-			} else {
-				options->res_y = num;
 			}
-
 			break;
 		case 'u': /* username */
 			options->username = arg;
 			break;
+
+		/* Options without arguments */
+
+		case 'S': /* SFW */
+			options->purity |= WB_PURITY_SFW;
+			break;
+		case 'K': /* Sketchy */
+			options->purity |= WB_PURITY_SKETCHY;
+			break;
+		case 'N': /* NSFW */
+			options->purity |= WB_PURITY_NSFW;
+			break;
+		case 'G': /* Wallpapers / General board */
+			options->boards |= WB_BOARD_GENERAL;
+			break;
+		case 'A': /* Anime / Manga board */
+			options->boards |= WB_BOARD_ANIME;
+			break;
+		case 'H': /* High Resolution board */
+			options->boards |= WB_BOARD_HIGHRES;
+			break;
+		case WB_KEY_PRINT_ONLY: /* print only */
+			options->flags |= WB_FLAG_PRINT_ONLY;
+			break;
+
+		/* Help, usage, errors */
+
 		case 'h': /* help */
 			print_full_help();
 			return -1;

@@ -28,6 +28,9 @@
  * Defines
  **************************************************/
 
+/* Size of a static array */
+#define ARR_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 /* Search types */
 #define WB_TYPE_SEARCH         1
 #define WB_TYPE_TOPLIST        2
@@ -44,6 +47,17 @@
 #define WB_SORT_ASCENDING      0
 #define WB_SORT_DESCENDING     1
 
+/* Toplist intervals */
+#define WB_TOPLIST_NONE        0
+#define WB_TOPLIST_1D          1
+#define WB_TOPLIST_3D          2
+#define WB_TOPLIST_1W          3
+#define WB_TOPLIST_2W          4
+#define WB_TOPLIST_1M          5
+#define WB_TOPLIST_2M          6
+#define WB_TOPLIST_3M          7
+#define WB_TOPLIST_ALL_TIME    8
+
 /* Resolution options */
 #define WB_RES_EXACTLY         0
 #define WB_RES_AT_LEAST        1
@@ -55,13 +69,13 @@
 #define WB_PURITY_SFW       0x01
 #define WB_PURITY_SKETCHY   0x02
 #define WB_PURITY_NSFW      0x04
-#define WB_PURITY_ALL       0x07
+#define WB_PURITY_ALL       (WB_PURITY_SFW | WB_PURITY_SKETCHY | WB_PURITY_NSFW)
 
 /* wallbase.cc wallpaper boards */
 #define WB_BOARD_GENERAL    0x01
 #define WB_BOARD_ANIME      0x02
 #define WB_BOARD_HIGHRES    0x04
-#define WB_BOARD_ALL        0x07
+#define WB_BOARD_ALL        (WB_BOARD_GENERAL | WB_BOARD_ANIME | WB_BOARD_HIGHRES)
 
 /* ARGP option keys */
 #define WB_KEY_USAGE         300
@@ -78,10 +92,9 @@ struct curl_response {
 
 struct options {
 	char *username, *password;
-	unsigned char search_type;
 	char *dir;
 	char *query;
-	char *toplist_interval;
+	unsigned char toplist;
 	int color;
 	int images, images_per_page;
 	unsigned char flags, purity, boards;

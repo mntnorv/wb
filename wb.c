@@ -66,13 +66,20 @@ main(int argc, char* argv[]) {
 	options.dir = ".";
 	options.images = 20;
 	options.images_per_page = 20;
-	options.flags = 0;
-	options.purity = WB_PURITY_ALL;
-	options.boards = WB_BOARD_ALL;
+
+	options.query = NULL;
+	options.color = -1;
+	options.toplist = WB_TOPLIST_NONE;
+
 	options.res_x = 0;
 	options.res_y = 0;
 	options.res_opt = WB_RES_AT_LEAST;
 	options.aspect_ratio = 0;
+
+	options.flags = 0;
+	options.purity = 0;
+	options.boards = 0;
+
 	options.sort_by = WB_SORT_RELEVANCE;
 	options.sort_order = WB_SORT_DESCENDING;
 
