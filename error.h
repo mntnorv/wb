@@ -26,5 +26,7 @@
 
 void wb_verror(const char *format, va_list args);
 void wb_error(const char *format, ...);
+void wb_verror_no_prefix(const char *format, va_list args);
+void wb_error_no_prefix(const char *format, ...);
 
 #endif

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <libgen.h>
 #include <getopt.h>
 
 #include "args.h"
@@ -33,16 +34,12 @@
  * Constants
  **************************************************/
 
-const char ABOUT[] = "wb -- A wallbase.cc image downloader";
-const char *BUG_ADDRESS = "<mntnorv+bugs@gmail.com>";
+static char *APP_INVOKE_NAME = "wb";
 
-const char *SHORT_USAGE = "Usage: wb [OPTION...]";
-const char *LONG_USAGE = "\
-Usage: wb [-AGHKNShV] [-a ASPECT] [-c COLOR] [-d DIR] [-n COUNT] [-p PASSWORD]\n\
-            [-q STRING] [-r RES] [-s SORT] [-t INTERVAL] [-u USERNAME]";
+static const char *ABOUT = "wb -- A wallbase.cc image downloader";
+static const char *BUG_ADDRESS = "<mntnorv+bugs@gmail.com>";
 
-const char *SHORT_HELP = "Try `wb --help' or `wb --usage' for more information.";
-const char *LONG_HELP = "\
+static const char *LONG_HELP = "\
   -a, --aspect=ASPECT        Search for images with this aspect ratio\n\
   -A, --anime, --manga       Search in the Anime / Manga board\n\
   -c, --color=COLOR          Search for images containing this color\n\
@@ -71,13 +68,27 @@ const char *LONG_HELP = "\
 Mandatory or optional arguments to long options are also mandatory or optional\n\
 for any corresponding short options.";
 
-const char *FORMAT_VERSION = "\
+/**************************************************
+ * Formats
+ **************************************************/
+
+static const char *FORMAT_SHORT_USAGE = "Usage: %s [OPTION...]";
+static const char *FORMAT_LONG_USAGE = "\
+Usage: %s [-AGHKNShV] [-a ASPECT] [-c COLOR] [-d DIR] [-n COUNT]\n\
+            [-p PASSWORD] [-q STRING] [-r RES] [-s SORT] [-t INTERVAL]\n\
+            [-u USERNAME]\n";
+
+static const char *FORMAT_SHORT_HELP = "Try '%s --help' or '%s --usage' for more information.";
+
+static const char *FORMAT_VERSION = "\
 wb, version %s\nCopyright (C) 2013 Mantas Norvaiša\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
-const char *FORMAT_FULL_HELP = "%s\n%s\n\n%s\n\nReport bugs to %s\n";
+/**************************************************
+ * getopt specific vars
+ **************************************************/
 
 static const char *GETOPT_SHORT_OPTIONS = "a:c:d:n:p:q:r:s:t:u:AGHKNShV";
 static struct option GETOPT_LONG_OPTIONS[] = {
@@ -122,7 +133,8 @@ static struct option GETOPT_LONG_OPTIONS[] = {
  */
 void
 invalid_arg_error(char *name, char *arg) {
-	wb_error("invalid %s -- '%s'\n%s\n", name, arg, SHORT_HELP);
+	wb_error("invalid %s -- %s", name, arg);
+	wb_error_no_prefix(FORMAT_SHORT_HELP, APP_INVOKE_NAME, APP_INVOKE_NAME);
 }
 
 /**
@@ -130,7 +142,9 @@ invalid_arg_error(char *name, char *arg) {
  */
 void
 print_full_help() {
-	printf(FORMAT_FULL_HELP, SHORT_USAGE, ABOUT, LONG_HELP, BUG_ADDRESS);
+	printf(FORMAT_SHORT_USAGE, APP_INVOKE_NAME);
+	printf("\n%s\n\n%s\n\n", ABOUT, LONG_HELP);
+	printf("Report bugs to %s\n", BUG_ADDRESS);
 }
 
 /**
@@ -138,7 +152,7 @@ print_full_help() {
  */
 void
 print_full_usage() {
-	printf("%s\n", LONG_USAGE);
+	printf(FORMAT_LONG_USAGE, APP_INVOKE_NAME);
 }
 
 /**
@@ -271,8 +285,8 @@ parse_opt(int key, char *arg, struct options *options) {
 		case WB_KEY_USAGE: /* usage */
 			print_full_usage();
 			return -1;
-		case '?': /* getopt error */ 
-			fprintf(stderr, "%s\n", SHORT_HELP);
+		case '?': /* getopt error */
+			wb_error_no_prefix(FORMAT_SHORT_HELP, APP_INVOKE_NAME, APP_INVOKE_NAME);
 			return -1;
 		default:
 			return -1;
@@ -293,7 +307,11 @@ parse_opt(int key, char *arg, struct options *options) {
 void
 wb_parse_args(int argc, char *argv[], struct options *options) {
 	int key, option_index;
-	
+
+	/* Set app invoke name */
+	APP_INVOKE_NAME = basename(argv[0]);
+
+	/* Parse args */
 	while ((key = getopt_long(argc, argv, GETOPT_SHORT_OPTIONS,
 		GETOPT_LONG_OPTIONS, &option_index)) != -1) {
 

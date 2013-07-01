@@ -36,6 +36,7 @@ void
 wb_verror(const char *format, va_list args) {
 	fprintf(stderr, "%s", ERROR_PREFIX);
 	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
 }
 
 /**
@@ -50,5 +51,29 @@ wb_error(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 	wb_verror(format, args);
+	va_end(args);
+}
+
+/**
+ * Print a formatted error message without a prefix.
+ *
+ * @param format - the format string
+ * @param args - format arguments
+ */
+void wb_verror_no_prefix(const char *format, va_list args) {
+	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
+}
+
+/**
+ * Print a formatted error message without a prefix.
+ *
+ * @param format - the format string
+ * @param ... - format arguments
+ */
+void wb_error_no_prefix(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	wb_verror_no_prefix(format, args);
 	va_end(args);
 }
