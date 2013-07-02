@@ -1,3 +1,24 @@
+/*
+ * wb - A wallbase.cc image downloader
+ *
+ * Copyright (C) 2013 Mantas Norvaiša
+ *
+ * This file is part of wb.
+ * 
+ * wb is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * wb is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with wb.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "unity.h"
 #include "types.h"
 #include "error.h"
@@ -16,7 +37,7 @@ void tearDown() {
 void wb_error(const char *format, ...) {	
 }
 
-void wb_error_no_prefix(const char *fomrat, ...) {
+void wb_error_no_prefix(const char *format, ...) {
 }
 
 /* Functions that return to a known state */
@@ -125,14 +146,6 @@ void test_parseOpt_downloadDir_valid() {
 	res = parse_opt('d', ".", &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_STRING(".", options.dir);
-}
-
-void test_parseOpt_downloadDir_invalid() {
-	int res;
-
-	resetOptions();
-	res = parse_opt('d', "fakedir", &options);
-	TEST_ASSERT_EQUAL_INT(-1, res);
 }
 
 void test_parseOpt_imageNum_valid() {
@@ -413,7 +426,6 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_parseOpt_color_valid, __LINE__);
 	RUN_TEST(test_parseOpt_color_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_downloadDir_valid, __LINE__);
-	RUN_TEST(test_parseOpt_downloadDir_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_valid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_password_valid, __LINE__);

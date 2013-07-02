@@ -44,10 +44,14 @@ $(EXECUTABLES): $(OBJECTS)
 	$(CC) $@.o $(UNITY_OBJ) $(LDFLAGS) -o $@
 
 test: all
-	@echo -en "\n==============\nRunning tests:\n==============\n"
-	$(foreach testfile,$(EXECUTABLES), \
-		@echo -en "\n-----------------------\n$(testfile):\n-----------------------\n"; \
-		./$(testfile); \
+	@echo "=============="
+	@echo "Running tests:"
+	@echo "=============="
+	@$(foreach testfile,$(EXECUTABLES),\
+		echo "-----------------------";\
+		echo "$(testfile):";\
+		echo "-----------------------";\
+		./$(testfile);\
 	)
 
 clean:
