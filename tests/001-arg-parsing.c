@@ -22,6 +22,7 @@
 #include "unity.h"
 #include "types.h"
 #include "error.h"
+#include "filesys.h"
 #include "args.c"
 
 struct options options;
@@ -38,6 +39,10 @@ void wb_error(const char *format, ...) {
 }
 
 void wb_error_no_prefix(const char *format, ...) {
+}
+
+int dir_exists(const char *path) {
+	return 1;
 }
 
 /* Functions that return to a known state */
