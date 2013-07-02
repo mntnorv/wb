@@ -1,7 +1,7 @@
 language: c
 notifications:
   email: false
-compiler: gcc
+compiler: clang
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libtidy-dev libcurl4-openssl-dev libxml2-dev

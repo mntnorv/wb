@@ -21,7 +21,7 @@
 INCLUDES = -Iunity -I../src
 DEFINES = -DVERSION=\"test\"
 
-CFLAGS = -g -Wall -Werror $(INCLUDES) $(DEFINES)
+CFLAGS = -g -Wall $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
 
 # Filenames
