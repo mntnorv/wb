@@ -116,6 +116,5 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_parseOpt_aspectRatio_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_color_valid, __LINE__);
 	RUN_TEST(test_parseOpt_color_invalid, __LINE__);
-	UnityEnd();
-	return 0;
+	return UnityEnd();
 }
