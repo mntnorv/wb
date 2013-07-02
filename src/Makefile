@@ -25,7 +25,7 @@ CFLAGS = -g -Wall -Werror $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
 
 # Filenames
-SOURCES = wb.c args.c base64.c error.c net.c str_list.c url_enc.c xml.c xpath.c
+SOURCES = wb.c args.c base64.c error.c filesys.c net.c str_list.c url_enc.c xml.c xpath.c
 OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = wb
 ADDITIONAL_FILES = Makefile README.md COPYING

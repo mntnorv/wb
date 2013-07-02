@@ -28,6 +28,7 @@
 
 #include "args.h"
 #include "error.h"
+#include "filesys.h"
 #include "types.h"
 
 /**************************************************
@@ -442,7 +443,12 @@ parse_opt(int key, char *arg, struct options *options) {
 			}
 			break;
 		case 'd': /* download dir */
-			options->dir = arg;
+			if (dir_exists(arg)) {
+				options->dir = arg;
+			} else {
+				invalid_arg_error("download directory", arg);
+				return -1;
+			}
 			break;
 		case 'n': /* number of images */
 			if (parse_image_number(arg, options) == -1) {
