@@ -17,20 +17,12 @@
 # along with wb.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# App info
-APPNAME = wb
-VERSION = 0.1
-
 # Compiler flags
 INCLUDES = -I/usr/include/libxml2/ -I/usr/include/tidy/
-LIBS = -lcurl -ltidy -lxml2
 DEFINES = -DVERSION=\"$(VERSION)\"
 
 CFLAGS = -g -Wall -Werror $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
-
-# Compiler
-CC = gcc
 
 # Filenames
 SOURCES = wb.c args.c base64.c error.c net.c str_list.c url_enc.c xml.c xpath.c
@@ -38,16 +30,21 @@ OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = wb
 ADDITIONAL_FILES = Makefile README.md COPYING
 
+# Directories
+BIN_DIR = ../bin
+
 all: $(SOURCES) $(EXECUTABLE)
 	
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	mkdir -p $(BIN_DIR)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $(BIN_DIR)/$@
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<
 
 clean:
-	rm -f $(EXECUTABLE) $(OBJECTS)
+	rm -f $(OBJECTS)
+	rm -rf $(BIN_DIR)
 
 dist: clean
 	mkdir -p $(APPNAME)-$(VERSION)

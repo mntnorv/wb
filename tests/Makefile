@@ -19,14 +19,10 @@
 
 # Compiler flags
 INCLUDES = -Iunity -I../src
-LIBS = -lcurl -ltidy -lxml2
 DEFINES = -DVERSION=\"test\"
 
 CFLAGS = -g -Wall -Werror $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
-
-# Compiler
-CC = gcc
 
 # Filenames
 SOURCES = $(wildcard *.c)
