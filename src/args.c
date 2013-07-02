@@ -267,6 +267,10 @@ parse_color(char *arg, struct options *options) {
 	int num;
 	char *num_end;
 
+	if (strlen(arg) != 6 && strlen(arg) != 8) {
+		return -1;
+	}
+
 	num = strtol(arg, &num_end, 16);
 	if (arg + strlen(arg) != num_end || num < 0 || num > 0xFFFFFF) {
 		return -1;

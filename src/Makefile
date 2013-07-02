@@ -55,3 +55,5 @@ dist: clean
 	tar -cf $(APPNAME)-$(VERSION).tar $(APPNAME)-$(VERSION)
 	gzip $(APPNAME)-$(VERSION).tar
 	rm -rf $(APPNAME)-$(VERSION)
+
+.PHONY: clean
