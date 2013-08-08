@@ -44,6 +44,7 @@ convert_html_to_xml(const char *html) {
 
 	/* Set up the tidy parser */
 	document = tidyCreate();
+	tidyOptSetBool(document, TidyMark, no);
 	tidyOptSetBool(document, TidyForceOutput, yes);
 	tidyOptSetBool(document, TidyXmlOut, yes);
 	tidyOptSetBool(document, TidyNumEntities, yes);
@@ -112,14 +113,6 @@ net_get_response_as_xml(const char *url, const char *post_data,
 		fprintf(stderr, "Error: unable to convert HTML to XML\n");
 		return NULL;
 	}
-
-	/* Create an XML document */
-	/*xml_doc = xmlParseDoc(BAD_CAST xml_data);
-	free(xml_data);
-	if (xml_doc == NULL) {
-		fprintf(stderr, "Error: unable to parse XML\n");
-		return NULL;
-	}*/
 
 	return xml_data;
 }
