@@ -27,13 +27,18 @@ export LIBS = -lcurl -ltidy -lxml2
 # Compiler
 export CC = clang
 
+# Directories
+export BIN_DIR = "$(CURDIR)/bin"
+
 all:
+	mkdir -p $(BIN_DIR)
 	@$(MAKE) -C src
 
 test:
 	@$(MAKE) -C tests test
 
 clean:
+	rm -rf $(BIN_DIR)
 	@$(MAKE) -C src clean
 	@$(MAKE) -C tests clean
 

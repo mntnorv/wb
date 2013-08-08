@@ -30,13 +30,9 @@ OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = wb
 ADDITIONAL_FILES = Makefile README.md COPYING
 
-# Directories
-BIN_DIR = ../bin
-
 all: $(SOURCES) $(EXECUTABLE)
 	
 $(EXECUTABLE): $(OBJECTS)
-	mkdir -p $(BIN_DIR)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $(BIN_DIR)/$@
 
 .c.o:
@@ -44,7 +40,6 @@ $(EXECUTABLE): $(OBJECTS)
 
 clean:
 	rm -f $(OBJECTS)
-	rm -rf $(BIN_DIR)
 
 dist: clean
 	mkdir -p $(APPNAME)-$(VERSION)
