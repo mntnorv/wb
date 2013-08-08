@@ -18,7 +18,7 @@
 #
 
 # Compiler flags
-INCLUDES = -Iunity -I../src
+INCLUDES = -Iunity -I../src -I/usr/include/libxml2/ -I/usr/include/tidy/
 DEFINES = -DVERSION=\"test\"
 
 CFLAGS = -g -Wall $(INCLUDES) $(DEFINES)
