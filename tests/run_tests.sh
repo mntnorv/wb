@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # Copyright 2013 Mantas Norvaiša
 # 
@@ -17,36 +18,32 @@
 # along with wb.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Compiler flags
-INCLUDES = -Iunity -I../src
-DEFINES = -DVERSION=\"test\"
+echo
+echo "======================="
+echo "Running tests:"
+echo "======================="
 
-CFLAGS = -g -Wall $(INCLUDES) $(DEFINES)
-LDFLAGS = $(LIBS)
+FAILED=0
+TESTS=$#
 
-# Filenames
-SOURCES = $(wildcard *.c)
-UNITY = unity/unity.c
-UNITY_OBJ = unity.o
-OBJECTS = $(SOURCES:.c=.o) $(UNITY_OBJ)
-EXECUTABLES = $(SOURCES:.c=)
-ADDITIONAL_FILES = Makefile README.md COPYING
+for testfile in "$@"; do
+	echo
+	echo "-----------------------"
+	echo $testfile
+	echo "-----------------------"
+	./$testfile
 
-all: $(UNITY) $(SOURCES) $(EXECUTABLES)
+	if [ "$?" == "1" ]; then
+		FAILED=$(($FAILED + 1))
+	fi
+done
 
-.c.o:
-	$(CC) -c $(CFLAGS) $<
+echo
+echo "======================="
+echo "$TESTS Test files $FAILED Failures"
+echo "======================="
+echo
 
-$(UNITY_OBJ):
-	$(CC) -c $(CFLAGS) $(UNITY) -o $(UNITY_OBJ)
-
-$(EXECUTABLES): $(OBJECTS)
-	$(CC) $@.o $(UNITY_OBJ) $(LDFLAGS) -o $@
-
-test: all
-	@./run_tests.sh $(EXECUTABLES)
-
-clean:
-	rm -f $(EXECUTABLES) $(OBJECTS)
-
-.PHONY: clean test
+if [ "$FAILED" != "0" ]; then
+	exit 1
+fi
