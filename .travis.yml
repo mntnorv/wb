@@ -5,6 +5,7 @@ compiler: clang
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libtidy-dev libcurl4-openssl-dev libxml2-dev
+  - chmod +x tests/run_tests.sh
 script:
   - make
   - make test
