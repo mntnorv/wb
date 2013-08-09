@@ -26,7 +26,7 @@ echo "======================="
 FAILED=0
 TESTS=$#
 
-for testfile in "$@"; do
+for testfile; do
 	echo
 	echo "-----------------------"
 	echo $testfile

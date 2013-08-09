@@ -25,7 +25,7 @@ CFLAGS = -g -Wall $(INCLUDES) $(DEFINES)
 LDFLAGS = $(LIBS)
 
 # Filenames
-SOURCES = $(wildcard *.c)
+SOURCES = $(sort $(wildcard *.c))
 UNITY = unity/unity.c
 UNITY_OBJ = unity.o
 OBJECTS = $(SOURCES:.c=.o) $(UNITY_OBJ)
