@@ -29,6 +29,7 @@ struct wb_str_list {
 
 void wb_list_free(struct wb_str_list *list);
 struct wb_str_list *wb_list_append(struct wb_str_list *list, const char *str);
+struct wb_str_list *wb_list_append_all(struct wb_str_list *dest, struct wb_str_list *src);
 struct wb_str_list *wb_list_prepend(struct wb_str_list *list, const char *str);
 
 #endif

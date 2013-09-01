@@ -90,6 +90,50 @@ wb_list_append(struct wb_str_list *list, const char *str) {
 }
 
 /**
+ * Appends a list to the end of another list.
+ * The second list is copied to the first, so it can be freed
+ * after this call.
+ *
+ * @param dest - the list to append to the end of
+ * @param src - the list to append
+ * @return pointer to the first element of the list with the
+ *   new data appended.
+ */
+struct wb_str_list *
+wb_list_append_all(struct wb_str_list *dest, struct wb_str_list *src) {
+	struct wb_str_list *last;
+	struct wb_str_list *copy_this;
+	struct wb_str_list *new;
+
+	last = dest;
+	copy_this = src;
+
+	/* Find the last element in the first list */
+	if (last != NULL) {
+		while (last->next != NULL) {
+			last = last->next;
+		}
+	}
+
+	/* Copy the second list to the first one */
+	while (copy_this != NULL) {
+		new = wb_list_new_elem(strdup(copy_this->str), NULL);
+
+		if (last != NULL) {
+			last->next = new;
+			last = last->next;
+		} else {
+			last = new;
+			dest = new;
+		}
+
+		copy_this = copy_this->next;
+	}
+
+	return dest;
+}
+
+/**
  * Prepends a string to the start of the list.
  * The string is copied so it can be freed after prepending.
  *

@@ -28,8 +28,8 @@
 #include "wb.h"
 #include "types.h"
 #include "args.h"
-#include "base64.h"
 #include "net.h"
+#include "query.h"
 #include "url_enc.h"
 #include "xml.h"
 #include "xpath.h"
@@ -40,7 +40,6 @@
 
 static const char *URL_LOGIN_PAGE = "http://wallbase.cc/user/login";
 static const char *URL_LOGIN_POST = "http://wallbase.cc/user/do_login";
-static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
 
 static const char *FORMAT_LOGIN = "csrf=%s&ref=aHR0cDovL3dhbGxiYXNlLmNjLw%%3D%%3D&password=%s&username=%s";
 
@@ -58,47 +57,34 @@ main(int argc, char* argv[]) {
 	struct wb_str_list *cookies = NULL;
 	struct wb_str_list *image_urls = NULL;
 	struct wb_str_list *img_url;
-	struct options options;
+	struct wb_query *query;
+	struct options *options;
 
-	/* Set default options */
-	options.username = "";
-	options.password = "";
-	options.dir = ".";
-	options.images = 20;
-	options.images_per_page = 20;
-
-	options.query = NULL;
-	options.color = -1;
-	options.toplist = WB_TOPLIST_NONE;
-
-	options.res_x = 0;
-	options.res_y = 0;
-	options.res_opt = WB_RES_EXACTLY;
-	options.aspect_ratio = 0;
-
-	options.flags = 0;
-	options.purity = 0;
-	options.boards = 0;
-
-	options.sort_by = WB_SORT_RELEVANCE;
-	options.sort_order = WB_SORT_DESCENDING;
+	/* Get default options */
+	options = wb_get_default_options();
 
 	/* Parse arguments */
-	wb_parse_args(argc, argv, &options);
+	wb_parse_args(argc, argv, options);
 
 	/* Init */
 	net_init();
 	xpath_init();
 
-	/* Main operation */
-	cookies = wb_login(options.username, options.password);
-	if (cookies == NULL) {
-		net_cleanup();
-		xpath_cleanup();
-		return 1;
+	/* Login if needed */
+	if ((options->purity & WB_PURITY_NSFW) > 0) {
+		cookies = wb_login(options->username, options->password);
+		if (cookies == NULL) {
+			net_cleanup();
+			xpath_cleanup();
+			return 1;
+		}
 	}
 
-	image_urls = wb_get_image_urls(URL_TOPLIST, NULL, cookies);
+	/* Generate the query URL and POST data */
+	query = wb_generate_query(options);
+
+	/* Get image urls */
+	image_urls = wb_get_image_urls(query->url, query->post_data, cookies, options);
 	if (image_urls == NULL) {
 		wb_list_free(cookies);
 		net_cleanup();
@@ -106,13 +92,16 @@ main(int argc, char* argv[]) {
 		return 1;
 	}
 
+	/* Print image URLs */
 	img_url = image_urls;
 	while (img_url != NULL) {
 		printf("%s\n", img_url->str);
 		img_url = img_url->next;
 	}
 
-	/* Cleanup nd return */
+	/* Cleanup and return */
+	free(options);
+	wb_query_free(query);
 	wb_list_free(cookies);
 	wb_list_free(image_urls);
 	net_cleanup();
@@ -125,15 +114,50 @@ main(int argc, char* argv[]) {
  **************************************************/
 
 /**
- * wb_login:
- * @username - wallbase.cc username
- * @password - wallbase.cc password
+ * Get a new options structure with the default options.
  *
+ * @return a new options structure with the default options.
+ *   IMPORTANT: the returned structure must be freed using
+ *   free().
+ */
+struct options *
+wb_get_default_options() {
+	struct options *options;
+	options = (struct options *) malloc(sizeof(struct options));
+
+	options->username = "";
+	options->password = "";
+	options->dir = ".";
+	options->images = 20;
+	options->images_per_page = 20;
+
+	options->query = NULL;
+	options->color = -1;
+	options->toplist = WB_TOPLIST_NONE;
+
+	options->res_x = 0;
+	options->res_y = 0;
+	options->res_opt = WB_RES_EXACTLY;
+	options->aspect_ratio = 0;
+
+	options->flags = 0;
+	options->purity = 0;
+	options->boards = 0;
+
+	options->sort_by = WB_SORT_DATE;
+	options->sort_order = WB_SORT_DESCENDING;
+
+	return options;
+}
+
+/**
  * Login to wallbase.cc, by setting your specified cookies.
- * IMPORTANT: The resulting list of cookies must be freed with
- * wb_list_free().
  *
- * Returns a wb_str_list of cookies with the login session info.
+ * @param - wallbase.cc username
+ * @param - wallbase.cc password
+ * @return a wb_str_list of cookies with the login session info.
+ *   IMPORTANT: The resulting list of cookies must be freed with
+ *   wb_list_free().
  */
 struct wb_str_list *
 wb_login(const char *username, const char *password) {
@@ -251,7 +275,8 @@ wb_get_image_page_urls(const char *url, const char *post_data,
  * Connects to wallbase.cc with the specified post data and
  * cookies and retrieves image urls.
  *
- * @param url - wallbase.cc url to get images from.
+ * @param url - wallbase.cc url to get images from. Must have a
+ *   '%d' element to insert the starting image.
  * @param post_data - post data required for search parameters.
  * @param cookies - cookies with login session information.
  * @return a wb_str_list of image urls on success, NULL
@@ -260,19 +285,31 @@ wb_get_image_page_urls(const char *url, const char *post_data,
  */
 struct wb_str_list *
 wb_get_image_urls(const char *url, const char *post_data,
-	struct wb_str_list *cookies) {
+	struct wb_str_list *cookies, struct options *options) {
 
-	struct wb_str_list *img_urls = NULL;
-	struct wb_str_list *img_page_urls;
-	struct wb_str_list *img_page_url;
-	char *img_url;
+	struct wb_str_list *img_urls      = NULL;
+	struct wb_str_list *img_page_urls = NULL;
+	struct wb_str_list *img_page_url  = NULL;
+	struct wb_str_list *new_img_page_urls;
+	char *img_url, *page_url;
+	int page_url_length, i;
 
 	/* Get image page URLs */
-	img_page_urls = wb_get_image_page_urls(url, post_data, cookies);
+	page_url_length = strlen(url) + 8;
+	page_url = (char *) malloc(page_url_length);
+	for (i = 0; i < options->images; i += options->images_per_page) {
+		snprintf(page_url, page_url_length, url, i);
+
+		new_img_page_urls = wb_get_image_page_urls(page_url, post_data, cookies);
+		img_page_urls = wb_list_append_all(img_page_urls, new_img_page_urls);
+		wb_list_free(new_img_page_urls);
+	}
+	free(page_url);
 
 	/* Get an image URL from every image page URL */
 	img_page_url = img_page_urls;
-	while (img_page_url != NULL) {
+	i = 0;
+	while ((i < options->images) && (img_page_url != NULL)) {
 		img_url = wb_get_image_url(img_page_url->str, cookies);
 		if (img_url != NULL) {
 			img_urls = wb_list_append(img_urls, img_url);
@@ -280,6 +317,7 @@ wb_get_image_urls(const char *url, const char *post_data,
 		}
 
 		img_page_url = img_page_url->next;
+		i++;
 	}
 
 	/* Cleanup */

@@ -24,10 +24,22 @@
 
 #include "types.h"
 
-struct wb_str_list *wb_login(const char *username, const char *password);
-char *wb_get_login_csrf_token(struct wb_str_list **cookies);
-struct wb_str_list *wb_get_image_page_urls(const char *url, const char *post_data, struct wb_str_list *cookies);
-struct wb_str_list *wb_get_image_urls(const char *url, const char *post_data, struct wb_str_list *cookies);
-char *wb_get_image_url(const char *url, struct wb_str_list *cookies);
+struct options *
+wb_get_default_options();
+
+struct wb_str_list *
+wb_login(const char *username, const char *password);
+
+char *
+wb_get_login_csrf_token(struct wb_str_list **cookies);
+
+struct wb_str_list *
+wb_get_image_page_urls(const char *url, const char *post_data, struct wb_str_list *cookies);
+
+struct wb_str_list *
+wb_get_image_urls(const char *url, const char *post_data, struct wb_str_list *cookies, struct options *options);
+
+char *
+wb_get_image_url(const char *url, struct wb_str_list *cookies);
 
 #endif

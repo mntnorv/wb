@@ -20,6 +20,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "types.h"
@@ -38,7 +39,6 @@ static const char *URL_ENDPOINT_RANDOM  = "/random";
  * @param options - the option struct
  * @return an integer specifying the detected query type.
  *   Possible query types are defined in types.h as "WB_TYPE_*".
- *   If the query type was not detected returns -1.
  */
 int
 get_query_type(struct options *options) {
@@ -463,10 +463,6 @@ wb_generate_query(struct options *options) {
 
 	/* Determine the endpoint ot be used */
 	query_type = get_query_type(options);
-	if (query_type == -1) {
-		free(query);
-		return NULL;
-	}
 
 	switch (query_type) {
 		case WB_TYPE_SEARCH:
