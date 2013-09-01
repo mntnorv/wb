@@ -38,15 +38,15 @@
  * General global constants
  **************************************************/
 
-static const char *URL_LOGIN = "http://wallbase.cc/user/login";
+static const char *URL_LOGIN_PAGE = "http://wallbase.cc/user/login";
+static const char *URL_LOGIN_POST = "http://wallbase.cc/user/do_login";
 static const char *URL_TOPLIST = "http://wallbase.cc/toplist";
 
-static const char *FORMAT_LOGIN = "usrname=%s&pass=%s&nopass_email=Type+in+your+e-mail+and+press+enter&nopass=0&1=1";
+static const char *FORMAT_LOGIN = "csrf=%s&ref=aHR0cDovL3dhbGxiYXNlLmNjLw%%3D%%3D&password=%s&username=%s";
 
-static const char *XHTML_PREFIX = "xhtml";
-static const char *XHTML_HREF = "http://www.w3.org/1999/xhtml";
-static const char *XPATH_IMAGE_PAGE_URL = "//xhtml:div[contains(@class,'thumb')]/xhtml:a[@class='thdraggable thlink']/@href";
-static const char *XPATH_IMAGE_URL = "//xhtml:div[@id='bigwall']/xhtml:script";
+static const char *XPATH_CSRF_TOKEN = "//input[@name='csrf']/@value";
+static const char *XPATH_IMAGE_PAGE_URL = "//div[contains(@class,'thumb')]/div[@class='wrapper']/a[@target='_blank']/@href";
+static const char *XPATH_IMAGE_URL = "//img[contains(@class,'wall')]/@src";
 
 /**************************************************
  * Main
@@ -140,34 +140,77 @@ wb_login(const char *username, const char *password) {
 	char *enc_username;
 	char *enc_password;
 	char post_data[256];
-	char *response;
+	char *login_response;
+	char *csrf_token;
 
 	struct wb_str_list *cookies = NULL;
+
+	/* Get a new CSRF token */
+	csrf_token = wb_get_login_csrf_token(&cookies);
 
 	/* URL-encode username and password and insert into POST data */
 	enc_username = url_encode(username);
 	enc_password = url_encode(password);
-	sprintf(post_data, FORMAT_LOGIN, enc_username, enc_password);
+	sprintf(post_data, FORMAT_LOGIN, csrf_token, enc_password, enc_username);
 	free(enc_username);
 	free(enc_password);
+	free(csrf_token);
 
 	/* Login */
-	response = net_get_response(URL_LOGIN, post_data, &cookies, 1);
-	if (response == NULL) {
+	login_response = net_get_response(URL_LOGIN_POST, post_data, &cookies, 1);
+	if (login_response == NULL) {
 		fprintf(stderr, "Error: net_get_response() failed\n");
 		return NULL;
 	}
 
-	if (strlen(response) > 0) {
+	if (strlen(login_response) > 0) {
 		fprintf(stderr, "Error: unable to login to wallbase.cc\n");
-		free(response);
+		free(login_response);
 		wb_list_free(cookies);
 		return NULL;
 	}
 
-	free(response);
+	free(login_response);
 
 	return cookies;
+}
+
+/**
+ * Connects to the wallbase.cc login page and fetches a CSRF
+ * token.
+ *
+ * @return a CSRF token for the login form on success, NULL
+ *   otherwise. IMPORTANT: the returned string must be freed
+ *   using free().
+ */
+char *
+wb_get_login_csrf_token(struct wb_str_list **cookies) {
+	char *login_page_xml_data;
+	char *csrf_token;
+
+	struct wb_str_list *xpath_results;
+
+	/* Get the login page as XML */
+	login_page_xml_data = net_get_response_as_xml(URL_LOGIN_PAGE, NULL, cookies, 1);
+	if (login_page_xml_data == NULL) {
+		return NULL;
+	}
+
+	/* Get the CSRF token from XML */
+	xpath_results = xpath_eval_expr(login_page_xml_data, XPATH_CSRF_TOKEN, NULL);
+	free(login_page_xml_data);
+
+	if (xpath_results == NULL) {
+		return NULL;
+	} else if (xpath_results->next != NULL) {
+		wb_list_free(xpath_results);
+		return NULL;
+	}
+
+	csrf_token = strdup(xpath_results->str);
+	wb_list_free(xpath_results);
+
+	return csrf_token;
 }
 
 /**
@@ -186,12 +229,7 @@ wb_get_image_page_urls(const char *url, const char *post_data,
 	struct wb_str_list *cookies) {
 
 	struct wb_str_list *urls = NULL;
-	struct wb_str_list *namespaces = NULL;
 	char *xml_data;
-
-	/* Add namespaces required for XPath */
-	namespaces = wb_list_append(namespaces, XHTML_PREFIX);
-	namespaces = wb_list_append(namespaces, XHTML_HREF);
 
 	/* Get response as XML */
 	xml_data = net_get_response_as_xml(url, post_data, &cookies, 0);
@@ -200,9 +238,8 @@ wb_get_image_page_urls(const char *url, const char *post_data,
 	}
 
 	/* Get urls from the XML */
-	urls = xpath_eval_expr(xml_data, XPATH_IMAGE_PAGE_URL, namespaces);
+	urls = xpath_eval_expr(xml_data, XPATH_IMAGE_PAGE_URL, NULL);
 	free(xml_data);
-	wb_list_free(namespaces);
 
 	return urls;
 }
@@ -258,17 +295,9 @@ wb_get_image_urls(const char *url, const char *post_data,
  */
 char *
 wb_get_image_url(const char *url, struct wb_str_list *cookies) {
-	char *img_url = NULL, *encoded_url = NULL, *result_str;
+	char *img_url = NULL;
 	char *xml_data;
 	struct wb_str_list *xpath_results;
-	struct wb_str_list *namespaces = NULL;
-
-	int encoded_length = 0;
-	char *encoded_start, *encoded_end;
-
-	/* Add namespaces required for XPath */
-	namespaces = wb_list_append(namespaces, XHTML_PREFIX);
-	namespaces = wb_list_append(namespaces, XHTML_HREF);
 
 	/* Get response as XML */
 	xml_data = net_get_response_as_xml(url, NULL, &cookies, 0);
@@ -277,31 +306,18 @@ wb_get_image_url(const char *url, struct wb_str_list *cookies) {
 	}
 
 	/* Get the script node (that contains the encoded url) data */
-	xpath_results = xpath_eval_expr(xml_data, XPATH_IMAGE_URL, namespaces);
+	xpath_results = xpath_eval_expr(xml_data, XPATH_IMAGE_URL, NULL);
 	free(xml_data);
-	wb_list_free(namespaces);
 
 	if (xpath_results == NULL) {
 		return NULL;
 	} else if (xpath_results->next != NULL) {
+		wb_list_free(xpath_results);
 		return NULL;
 	}
 
-	result_str = strdup(xpath_results->str);
+	img_url = strdup(xpath_results->str);
 	wb_list_free(xpath_results);
-	
-	/* Extract encoded URL from the result node */
-	encoded_url = (char *)malloc(256);
-	encoded_start = strstr(result_str, "B('") + 3;
-	encoded_end = strstr(result_str, "')");
-	encoded_length = encoded_end - encoded_start;
-	strncpy(encoded_url, encoded_start, encoded_length);
-	encoded_url[encoded_length] = '\0';
-	free(result_str);
-
-	/* Decode URL*/
-	img_url = b64_decode(encoded_url);
-	free(encoded_url);
 
 	return img_url;
 }
