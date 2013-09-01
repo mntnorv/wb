@@ -87,6 +87,9 @@ static const char *LONG_HELP = "\
   -q, --query=STRING         Search for images related to this string\n\
   -r, --resolution=RES       Search for images with at least or exactly this\n\
                              resolution\n\
+  -R, --random               Get randomly sorted images. Purity, board,\n\
+                             resolution and aspect ratio filters can all be used\n\
+                             with this option.\n\
   -s, --sort=SORT            Specify the sort order\n\
   -S, --sfw                  Search for SFW images\n\
   -t, --toplist=INTERVAL     Get the top images in the specified time interval\n\
@@ -120,7 +123,7 @@ There is NO WARRANTY, to the extent permitted by law.\n";
  * getopt specific vars
  **************************************************/
 
-static const char *GETOPT_SHORT_OPTIONS = "a:c:d:n:p:q:r:s:t:u:AGHKNShV";
+static const char *GETOPT_SHORT_OPTIONS = "a:c:d:n:p:q:r:s:t:u:AGHKNRShV";
 static struct option GETOPT_LONG_OPTIONS[] = {
 	/* Options with arguments */
 	{"aspect",       required_argument, 0, 'a'},
@@ -141,6 +144,7 @@ static struct option GETOPT_LONG_OPTIONS[] = {
 	{"high-res",     no_argument,       0, 'H'},
 	{"sketchy",      no_argument,       0, 'K'},
 	{"nsfw",         no_argument,       0, 'N'},
+	{"random",       no_argument,       0, 'R'},
 	{"sfw",          no_argument,       0, 'S'},
 	{"help",         no_argument,       0, 'h'},
 	{"version",      no_argument,       0, 'V'},
@@ -486,6 +490,9 @@ parse_opt(int key, char *arg, struct options *options) {
 
 		/* Options without arguments */
 
+		case 'R':
+			options->flags |= WB_FLAG_RANDOM;
+			break;
 		case 'S': /* SFW */
 			options->purity |= WB_PURITY_SFW;
 			break;

@@ -32,10 +32,9 @@
 #define ARR_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 /* Search types */
-#define WB_TYPE_SEARCH         1
-#define WB_TYPE_TOPLIST        2
-#define WB_TYPE_COLOR          3
-#define WB_TYPE_RANDOM         4
+#define WB_TYPE_SEARCH         0
+#define WB_TYPE_TOPLIST        1
+#define WB_TYPE_RANDOM         2
 
 /* Sort types */
 #define WB_SORT_RELEVANCE      1
@@ -64,6 +63,7 @@
 
 /* Flags */
 #define WB_FLAG_PRINT_ONLY  0x01
+#define WB_FLAG_RANDOM      0x02
 
 /* wallbase.cc purities */
 #define WB_PURITY_SFW       0x01
@@ -77,9 +77,10 @@
 #define WB_BOARD_HIGHRES    0x04
 #define WB_BOARD_ALL        (WB_BOARD_GENERAL | WB_BOARD_ANIME | WB_BOARD_HIGHRES)
 
-/* ARGP option keys */
+/* getopt() option keys */
 #define WB_KEY_USAGE         300
 #define WB_KEY_PRINT_ONLY    301
+#define WB_KEY_RANDOM        302
 
 /**************************************************
  * Structs

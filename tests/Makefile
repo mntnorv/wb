@@ -43,18 +43,10 @@ $(UNITY_OBJ):
 $(EXECUTABLES): $(OBJECTS)
 	$(CC) $@.o $(UNITY_OBJ) $(LDFLAGS) -o $@
 
-depend: .depend
-
-.depend: $(SOURCES)
-	rm -f ./.depend
-	$(CC) $(CFLAGS) -MM $^>>./.depend;
-
 test: all
 	@./run_tests.sh $(EXECUTABLES)
 
 clean:
-	rm -f $(EXECUTABLES) $(OBJECTS) .depend
+	rm -f $(EXECUTABLES) $(OBJECTS)
 
 .PHONY: clean test
-
-include .depend

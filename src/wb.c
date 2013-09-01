@@ -73,7 +73,7 @@ main(int argc, char* argv[]) {
 
 	options.res_x = 0;
 	options.res_y = 0;
-	options.res_opt = WB_RES_AT_LEAST;
+	options.res_opt = WB_RES_EXACTLY;
 	options.aspect_ratio = 0;
 
 	options.flags = 0;
@@ -179,6 +179,9 @@ wb_login(const char *username, const char *password) {
  * Connects to the wallbase.cc login page and fetches a CSRF
  * token.
  *
+ * @param cookies - a list of cookies, can be passed empty.
+ *   This list will be updated and should be used when sending
+ *   the login POST request, otherwise the login will fail.
  * @return a CSRF token for the login form on success, NULL
  *   otherwise. IMPORTANT: the returned string must be freed
  *   using free().
