@@ -26,6 +26,9 @@
 #include "types.h"
 #include "net.h"
 
+/* Global CURL handle for reuse */
+static CURL *curl_handle = NULL;
+
 /**
  * Initialize the wb net system.
  */
@@ -37,6 +40,10 @@ void net_init() {
  * Cleanup the wb net system.
  */
 void net_cleanup() {
+	if (curl_handle != NULL) {
+		curl_easy_cleanup(curl_handle);
+	}
+
 	curl_global_cleanup();
 }
 
@@ -135,7 +142,6 @@ char *
 net_get_response(const char *url, const char *post_data,
 	struct wb_str_list **cookies, int update_cookies) {
 
-	CURL *curl;
 	CURLcode res;
 
 	/* Set up struct for CURL response */
@@ -148,27 +154,32 @@ net_get_response(const char *url, const char *post_data,
 	response.data[0] = '\0';
 
 	/* Set up CURL */
-	curl = curl_easy_init();
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+	if (curl_handle == NULL) {
+		curl_handle = curl_easy_init();
+	}
+
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &response);
+	curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
 
 	if (update_cookies) {
-		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, "");
 	}
 
 	if (post_data != NULL) {
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
+	} else {
+		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);
 	}
 
 	if (cookies != NULL) {
-		curl_add_cookies(curl, *cookies);
+		curl_add_cookies(curl_handle, *cookies);
 	}
 
 	/* Perform CURL transaction */
-	res = curl_easy_perform(curl);
+	res = curl_easy_perform(curl_handle);
 	if (res != CURLE_OK) {
-		curl_easy_cleanup(curl);
 		return NULL;
 	}
 
@@ -178,15 +189,13 @@ net_get_response(const char *url, const char *post_data,
 			wb_list_free(*cookies);
 		}
 
-		*cookies = curl_get_cookies(curl);
+		*cookies = curl_get_cookies(curl_handle);
 		if (*cookies == NULL) {
-			curl_easy_cleanup(curl);
 			return NULL;
 		}
 	}
-
-	/* Cleanup */
-	curl_easy_cleanup(curl);
+	
+	puts(response.data);
 	return response.data;
 }
 
