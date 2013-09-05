@@ -276,7 +276,7 @@ wb_get_image_page_urls(const char *url, const char *post_data,
  * cookies and retrieves image urls.
  *
  * @param url - wallbase.cc url to get images from. Must have a
- *   '%d' element to insert the starting image.
+ *   '%d' element to insert the image to start from.
  * @param post_data - post data required for search parameters.
  * @param cookies - cookies with login session information.
  * @return a wb_str_list of image urls on success, NULL

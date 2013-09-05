@@ -157,21 +157,17 @@ net_get_response(const char *url, const char *post_data,
 	if (curl_handle == NULL) {
 		curl_handle = curl_easy_init();
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
 	}
 
-	/*curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1);*/
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &response);
 	curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
 
-	if (update_cookies) {
-		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, "");
-	}
-
-	if (post_data != NULL) {
-		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
+	if (post_data == NULL) {
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
 	} else {
-		/*curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);*/
+		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
 	}
 
 	if (cookies != NULL) {
@@ -196,7 +192,6 @@ net_get_response(const char *url, const char *post_data,
 		}
 	}
 	
-	/*puts(response.data);*/
 	return response.data;
 }
 
