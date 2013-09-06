@@ -45,6 +45,7 @@ void net_init() {
 void net_cleanup() {
 	if (curl_handle != NULL) {
 		curl_easy_cleanup(curl_handle);
+		curl_handle = NULL;
 	}
 
 	curl_global_cleanup();
@@ -62,6 +63,7 @@ setup_curl_handle() {
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
 	} else {
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
+		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);
 		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
 	}
 }
@@ -209,7 +211,7 @@ net_get_response(const char *url, const char *post_data,
 	}
 
 	/* Update cookies if needed */
-	if (update_cookies) {
+	if (update_cookies == 1) {
 		if (cookies != NULL) {
 			wb_list_free(*cookies);
 		}
