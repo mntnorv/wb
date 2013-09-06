@@ -37,6 +37,9 @@ void tearDown() {
 void wb_list_free(struct wb_str_list *list) {
 }
 
+void wb_error(const char *format, ...) {
+}
+
 /* Tests */
 void test_netGetResponse_validUrl() {
 	char *res;
