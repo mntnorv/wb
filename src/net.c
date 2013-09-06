@@ -256,8 +256,6 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 		snprintf(full_file_path, full_path_length, "%s%s", file_path, file_name);
 	}
 
-	puts(full_file_path);
-
 	/* Open the file */
 	download_file = fopen(full_file_path, "wb");
 
