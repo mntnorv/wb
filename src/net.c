@@ -235,19 +235,31 @@ net_get_response(const char *url, const char *post_data,
 int
 net_download(const char *url, const char *file_path, const char *file_name) {
 	CURLcode res;
-	/*char *full_file_path;*/
+	char *full_file_path;
 	char *url_copy = NULL;
+	int path_length, full_path_length;
 	FILE *download_file;
 
-	/* Open the file to download to */
+	/* Get the full file path to download to */
 	if (file_name == NULL) {
 		url_copy = strdup(url);
 		file_name = basename(url_copy);
 	}
 
-	puts(file_name);
+	path_length = strlen(file_path);
+	full_path_length = path_length + strlen(file_name) + 2;
+	full_file_path = (char *) malloc(full_path_length);
 
-	download_file = fopen(file_name, "wb");
+	if ((path_length > 0) && (file_path[path_length - 1] != '/')) {
+		snprintf(full_file_path, full_path_length, "%s/%s", file_path, file_name);
+	} else {
+		snprintf(full_file_path, full_path_length, "%s%s", file_path, file_name);
+	}
+
+	puts(full_file_path);
+
+	/* Open the file */
+	download_file = fopen(full_file_path, "wb");
 
 	if (download_file == NULL) {
 		return -1;
@@ -273,6 +285,8 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 	if (url_copy != NULL) {
 		free(url_copy);
 	}
+
+	free(full_file_path);
 
 	return 0;
 }
