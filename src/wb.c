@@ -96,6 +96,7 @@ main(int argc, char* argv[]) {
 	img_url = image_urls;
 	while (img_url != NULL) {
 		printf("%s\n", img_url->str);
+		net_download(img_url->str, options->dir, NULL);
 		img_url = img_url->next;
 	}
 

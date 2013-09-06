@@ -20,10 +20,13 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <libgen.h>
 #include <curl/curl.h>
 
 #include "types.h"
+#include "error.h"
 #include "net.h"
 
 /* Global CURL handle for reuse */
@@ -47,6 +50,22 @@ void net_cleanup() {
 	curl_global_cleanup();
 }
 
+
+/**
+ * Setup the CURL handle. Creates a new handle if it has not already
+ * been created, cleans up the handle otherwise.
+ */
+void
+setup_curl_handle() {
+	if (curl_handle == NULL) {
+		curl_handle = curl_easy_init();
+		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
+	} else {
+		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
+	}
+}
+
 /**
  * Writes CURL response to a curl_response structure.
  *
@@ -57,7 +76,7 @@ void net_cleanup() {
  * @return the size of data written in bytes.
  */
 size_t
-write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data) {
+write_data_to_response(void *ptr, size_t size, size_t nmemb, struct curl_response *data) {
 	size_t index = data->size;
 	size_t n = (size * nmemb);
 	char* tmp;
@@ -72,7 +91,7 @@ write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data) {
 		if(data->data) {
 			free(data->data);
 		}
-		fprintf(stderr, "Failed to allocate memory.\n");
+		wb_error("failed to allocate memory");
 		return 0;
 	}
 
@@ -80,6 +99,22 @@ write_data(void *ptr, size_t size, size_t nmemb, struct curl_response *data) {
 	data->data[data->size] = '\0';
 
 	return size * nmemb;
+}
+
+/**
+ * Writes CURL response to a FILE.
+ *
+ * @param ptr - CURL response data pointer.
+ * @param size - size of the data to write in units of nmemb.
+ * @param nmemb - multiplier of size.
+ * @param file - the file to write data to.
+ * @return the size of data written in bytes.
+ */
+size_t
+write_data_to_file(void *ptr, size_t size, size_t nmemb, FILE *file) {
+	size_t written;
+	written = fwrite(ptr, size, nmemb, file);
+	return written;
 }
 
 /**
@@ -154,19 +189,12 @@ net_get_response(const char *url, const char *post_data,
 	response.data[0] = '\0';
 
 	/* Set up CURL */
-	if (curl_handle == NULL) {
-		curl_handle = curl_easy_init();
-		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
-		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
-	}
-
+	setup_curl_handle();
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_response);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &response);
-	curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
 
-	if (post_data == NULL) {
-		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
-	} else {
+	if (post_data != NULL) {
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
 	}
 
@@ -193,6 +221,60 @@ net_get_response(const char *url, const char *post_data,
 	}
 	
 	return response.data;
+}
+
+/**
+ * Downloads a file from the specified URL.
+ *
+ * @param url - the URL to download from.
+ * @param file_path - path of the downloaded file.
+ * @param file_name - name of the file to download. If this is NULL
+ *   then the filename from the URL is used.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+net_download(const char *url, const char *file_path, const char *file_name) {
+	CURLcode res;
+	/*char *full_file_path;*/
+	char *url_copy = NULL;
+	FILE *download_file;
+
+	/* Open the file to download to */
+	if (file_name == NULL) {
+		url_copy = strdup(url);
+		file_name = basename(url_copy);
+	}
+
+	puts(file_name);
+
+	download_file = fopen(file_name, "wb");
+
+	if (download_file == NULL) {
+		return -1;
+	}
+
+	/* Set up CURL */
+	setup_curl_handle();
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_file);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, download_file);
+
+	/* Download file */
+	res = curl_easy_perform(curl_handle);
+	if (res != CURLE_OK) {
+		return -1;
+	}
+
+	/* Cleanup */
+	if (fclose(download_file) != 0) {
+		return -1;
+	}
+
+	if (url_copy != NULL) {
+		free(url_copy);
+	}
+
+	return 0;
 }
 
 /**

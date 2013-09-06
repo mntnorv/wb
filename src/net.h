@@ -27,6 +27,7 @@
 void net_init();
 void net_cleanup();
 char *net_get_response(const char *url, const char *post_data, struct wb_str_list **cookies, int update_cookies);
+int net_download(const char *url, const char *file_path, const char *file_name);
 int net_connect(const char *url, const char *post_data, struct wb_str_list **cookies, int update_cookies);
 
 #endif
