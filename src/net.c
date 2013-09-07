@@ -56,6 +56,7 @@ setup_curl_handle() {
 	if (curl_handle == NULL) {
 		curl_handle = curl_easy_init();
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
+		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 120L); /* Set the timeout to 2 minutes */
 	} else {
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* Remove all cookies */
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);

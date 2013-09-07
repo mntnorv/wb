@@ -284,14 +284,19 @@ wb_get_image_urls(const char *url, const char *post_data,
 	struct wb_str_list *img_page_url  = NULL;
 	struct wb_str_list *new_img_page_urls;
 	char *img_url, *page_url;
-	int page_url_length, i;
+	int page_url_length, show_progress, i;
+
+	show_progress = options->flags & WB_FLAG_PROGRESS;
 
 	/* Get image page URLs */
 	page_url_length = strlen(url) + 8;
 	page_url = (char *) malloc(page_url_length);
 	for (i = 0; i < options->images; i += options->images_per_page) {
-		printf("Getting page URLs: %d - %d\r", i + 1, i + options->images_per_page);
-		fflush(stdout);
+		if (show_progress) {
+			printf("Getting page URLs: %d - %d\r", i + 1, i + options->images_per_page);
+			fflush(stdout);
+		}
+
 		snprintf(page_url, page_url_length, url, i);
 
 		new_img_page_urls = wb_get_image_page_urls(page_url, post_data, cookies);
@@ -300,15 +305,19 @@ wb_get_image_urls(const char *url, const char *post_data,
 	}
 	free(page_url);
 
-	printf("\n");
-	fflush(stdout);
+	if (show_progress) {
+		printf("\n");
+		fflush(stdout);
+	}
 
 	/* Get an image URL from every image page URL */
 	img_page_url = img_page_urls;
 	i = 0;
 	while ((i < options->images) && (img_page_url != NULL)) {
-		printf("Getting image URLs: %d / %d\r", i + 1, options->images);
-		fflush(stdout);
+		if (show_progress) {
+			printf("Getting image URLs: %d / %d\r", i + 1, options->images);
+			fflush(stdout);
+		}
 
 		img_url = wb_get_image_url(img_page_url->str, cookies);
 		if (img_url != NULL) {
@@ -320,8 +329,10 @@ wb_get_image_urls(const char *url, const char *post_data,
 		i++;
 	}
 
-	printf("\n");
-	fflush(stdout);
+	if (show_progress) {
+		printf("\n");
+		fflush(stdout);
+	}
 
 	/* Cleanup */
 	wb_list_free(img_page_urls);

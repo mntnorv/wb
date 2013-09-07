@@ -77,6 +77,7 @@ static const char *LONG_HELP = "\
   -N, --nsfw                 Search for NSFW images (requires wallbase.cc login\n\
                              information)\n\
   -p, --password=PASSWORD    wallbase.cc password, required for NSFW content\n\
+  -P, --show-progress        Show progress information (off by default)\n\
   -q, --query=STRING         Search for images related to this string\n\
   -r, --resolution=RES       Search for images with at least or exactly this\n\
                              resolution\n\
@@ -100,7 +101,7 @@ for any corresponding short options.";
 
 static const char *FORMAT_SHORT_USAGE = "Usage: %s [OPTION...]";
 static const char *FORMAT_LONG_USAGE = "\
-Usage: %s [-AGHKNShV] [-a ASPECT] [-c COLOR] [-n COUNT] [-p PASSWORD]\n\
+Usage: %s [-AGHKNPRShV] [-a ASPECT] [-c COLOR] [-n COUNT] [-p PASSWORD]\n\
             [-q STRING] [-r RES] [-s SORT] [-t INTERVAL] [-u USERNAME]\n";
 
 static const char *FORMAT_SHORT_HELP = "Try '%s --help' or '%s --usage' for more information.";
@@ -115,33 +116,34 @@ There is NO WARRANTY, to the extent permitted by law.\n";
  * getopt specific vars
  **************************************************/
 
-static const char *GETOPT_SHORT_OPTIONS = "a:c:n:p:q:r:s:t:u:AGHKNRShV";
+static const char *GETOPT_SHORT_OPTIONS = "a:c:n:p:q:r:s:t:u:AGHKNPRShV";
 static struct option GETOPT_LONG_OPTIONS[] = {
 	/* Options with arguments */
-	{"aspect",       required_argument, 0, 'a'},
-	{"color",        required_argument, 0, 'c'},
-	{"images",       required_argument, 0, 'n'},
-	{"password",     required_argument, 0, 'p'},
-	{"query",        required_argument, 0, 'q'},
-	{"resolution",   required_argument, 0, 'r'},
-	{"sort",         required_argument, 0, 's'},
-	{"toplist",      required_argument, 0, 't'},
-	{"username",     required_argument, 0, 'u'},
+	{"aspect",        required_argument, 0, 'a'},
+	{"color",         required_argument, 0, 'c'},
+	{"images",        required_argument, 0, 'n'},
+	{"password",      required_argument, 0, 'p'},
+	{"query",         required_argument, 0, 'q'},
+	{"resolution",    required_argument, 0, 'r'},
+	{"sort",          required_argument, 0, 's'},
+	{"toplist",       required_argument, 0, 't'},
+	{"username",      required_argument, 0, 'u'},
 
 	/* Options without arguments */
-	{"anime",        no_argument,       0, 'A'},
-	{"manga",        no_argument,       0, 'A'},
-	{"general",      no_argument,       0, 'G'},
-	{"high-res",     no_argument,       0, 'H'},
-	{"sketchy",      no_argument,       0, 'K'},
-	{"nsfw",         no_argument,       0, 'N'},
-	{"random",       no_argument,       0, 'R'},
-	{"sfw",          no_argument,       0, 'S'},
-	{"help",         no_argument,       0, 'h'},
-	{"version",      no_argument,       0, 'V'},
+	{"anime",         no_argument,       0, 'A'},
+	{"manga",         no_argument,       0, 'A'},
+	{"general",       no_argument,       0, 'G'},
+	{"high-res",      no_argument,       0, 'H'},
+	{"sketchy",       no_argument,       0, 'K'},
+	{"nsfw",          no_argument,       0, 'N'},
+	{"show-progress", no_argument,       0, 'P'},
+	{"random",        no_argument,       0, 'R'},
+	{"sfw",           no_argument,       0, 'S'},
+	{"help",          no_argument,       0, 'h'},
+	{"version",       no_argument,       0, 'V'},
 
 	/* Long-only options */
-	{"usage",        no_argument,       0, WB_KEY_USAGE},
+	{"usage",         no_argument,       0, WB_KEY_USAGE},
 	{0}
 };
 
@@ -472,6 +474,9 @@ parse_opt(int key, char *arg, struct options *options) {
 
 		/* Options without arguments */
 
+		case 'P':
+			options->flags |= WB_FLAG_PROGRESS;
+			break;
 		case 'R':
 			options->flags |= WB_FLAG_RANDOM;
 			break;

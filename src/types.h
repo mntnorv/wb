@@ -61,6 +61,7 @@
 
 /* Flags */
 #define WB_FLAG_RANDOM      0x01
+#define WB_FLAG_PROGRESS    0x02
 
 /* wallbase.cc purities */
 #define WB_PURITY_SFW       0x01
