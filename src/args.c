@@ -1,6 +1,4 @@
 /*
- * wb - A wallbase.cc image downloader
- *
  * Copyright (C) 2013 Mantas Norvaiša
  *
  * This file is part of wb.
@@ -65,7 +63,7 @@ static const unsigned char WB_SORT_TYPE_IDS[] = {
 
 static char *APP_INVOKE_NAME = "wb";
 
-static const char *ABOUT = "wb -- A wallbase.cc image downloader";
+static const char *ABOUT = "wb -- A wallbase.cc image search tool";
 static const char *BUG_ADDRESS = "<mntnorv+bugs@gmail.com>";
 
 static const char *LONG_HELP = "\

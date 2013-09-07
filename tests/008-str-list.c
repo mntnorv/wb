@@ -1,6 +1,4 @@
 /*
- * wb - A wallbase.cc image downloader
- *
  * Copyright (C) 2013 Mantas Norvaiša
  *
  * This file is part of wb.
