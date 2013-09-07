@@ -20,7 +20,6 @@
 #include "unity.h"
 #include "types.h"
 #include "error.h"
-#include "filesys.h"
 #include "args.c"
 
 struct options options;
@@ -47,7 +46,6 @@ int dir_exists(const char *path) {
 void resetOptions() {
 	options.username = "";
 	options.password = "";
-	options.dir = ".";
 	options.images = 20;
 	options.images_per_page = 20;
 
@@ -135,20 +133,6 @@ void test_parseOpt_color_invalid() {
 	resetOptions();
 	res = parse_opt('a', "0fail0", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
-}
-
-void test_parseOpt_downloadDir_valid() {
-	int res;
-
-	resetOptions();
-	res = parse_opt('d', "unity", &options);
-	TEST_ASSERT_EQUAL_INT(0, res);
-	TEST_ASSERT_EQUAL_STRING("unity", options.dir);
-
-	resetOptions();
-	res = parse_opt('d', ".", &options);
-	TEST_ASSERT_EQUAL_INT(0, res);
-	TEST_ASSERT_EQUAL_STRING(".", options.dir);
 }
 
 void test_parseOpt_imageNum_valid() {
@@ -389,6 +373,15 @@ void test_parseOpt_flags() {
 	int res;
 
 	resetOptions();
+	res = parse_opt('P', NULL, &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(WB_FLAG_PROGRESS, options.flags & WB_FLAG_PROGRESS);
+
+	res = parse_opt('R', NULL, &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(WB_FLAG_RANDOM, options.flags & WB_FLAG_RANDOM);
+
+	resetOptions();
 	res = parse_opt('S', NULL, &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_INT(WB_PURITY_SFW, options.purity & WB_PURITY_SFW);
@@ -413,11 +406,6 @@ void test_parseOpt_flags() {
 	res = parse_opt('H', NULL, &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_INT(WB_BOARD_HIGHRES, options.boards & WB_BOARD_HIGHRES);
-
-	resetOptions();
-	res = parse_opt(WB_KEY_PRINT_ONLY, NULL, &options);
-	TEST_ASSERT_EQUAL_INT(0, res);
-	TEST_ASSERT_EQUAL_INT(WB_FLAG_PRINT_ONLY, options.flags & WB_FLAG_PRINT_ONLY);
 }
 
 /* Main */
@@ -428,7 +416,6 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_parseOpt_aspectRatio_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_color_valid, __LINE__);
 	RUN_TEST(test_parseOpt_color_invalid, __LINE__);
-	RUN_TEST(test_parseOpt_downloadDir_valid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_valid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_password_valid, __LINE__);
