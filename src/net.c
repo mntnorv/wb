@@ -292,6 +292,29 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 }
 
 /**
+ * Downloads a list of files to the specified directory.
+ *
+ * @param urls - a list of URLs of files to download
+ * @param dir - the dir to download to
+ * @return 0 on success, -1 otherwise
+ */
+int
+net_download_list(struct wb_str_list *urls, const char *dir) {
+	struct wb_str_list *url;
+	int failed = 0;
+
+	url = urls;
+	while (url != NULL) {
+		if (net_download(url->str, dir, NULL) != 0) {
+			failed++;
+		}
+		url = url->next;
+	}
+
+	return (failed == 0) ? 0 : -1;
+}
+
+/**
  * A wrapper for net_get_response(). Should be used when the
  * response is not needed.
  *

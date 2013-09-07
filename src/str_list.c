@@ -20,6 +20,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "str_list.h"
 
@@ -149,4 +150,20 @@ wb_list_prepend(struct wb_str_list *list, const char *str) {
 	new = wb_list_new_elem(strdup(str), list);
 
 	return new;
+}
+
+/**
+ * Prints a list of strings to stdout.
+ *
+ * @param list - the list to print
+ */
+void
+wb_list_print(struct wb_str_list *list) {
+	struct wb_str_list *item;
+
+	item = list;
+	while(item != NULL) {
+		puts(item->str);
+		item = item->next;
+	}
 }

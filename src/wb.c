@@ -56,7 +56,6 @@ main(int argc, char* argv[]) {
 	/* Variables */
 	struct wb_str_list *cookies = NULL;
 	struct wb_str_list *image_urls = NULL;
-	struct wb_str_list *img_url;
 	struct wb_query *query;
 	struct options *options;
 
@@ -92,12 +91,11 @@ main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	/* Print image URLs */
-	img_url = image_urls;
-	while (img_url != NULL) {
-		printf("%s\n", img_url->str);
-		net_download(img_url->str, options->dir, NULL);
-		img_url = img_url->next;
+	/* Download images or print image URLs */
+	if ((options->flags & WB_FLAG_PRINT_ONLY) == 0) {
+		net_download_list(image_urls, options->dir);
+	} else {
+		wb_list_print(image_urls);
 	}
 
 	/* Cleanup and return */
