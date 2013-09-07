@@ -258,10 +258,15 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 		snprintf(full_file_path, full_path_length, "%s%s", file_path, file_name);
 	}
 
+	if (url_copy != NULL) {
+		free(url_copy);
+	}
+
 	/* Open the file */
 	download_file = fopen(full_file_path, "wb");
 
 	if (download_file == NULL) {
+		free(full_file_path);
 		return -1;
 	}
 
@@ -273,19 +278,21 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 
 	/* Download file */
 	res = curl_easy_perform(curl_handle);
-	if (res != CURLE_OK) {
-		return -1;
-	}
 
-	/* Cleanup */
+	/* Close the file */
 	if (fclose(download_file) != 0) {
+		free(full_file_path);
 		return -1;
 	}
 
-	if (url_copy != NULL) {
-		free(url_copy);
+	/* Check if CURL encountered errors */
+	if (res != CURLE_OK) {
+		remove(full_file_path);
+		free(full_file_path);
+		return -1;
 	}
 
+	/* Final cleanup */
 	free(full_file_path);
 
 	return 0;

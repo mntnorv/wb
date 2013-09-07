@@ -19,9 +19,11 @@
  * along with wb.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <string.h>
 #include "unity.h"
 #include "types.h"
+#include "str_list.c"
 #include "net.c"
 
 /* Unity set up and tear down */
@@ -34,9 +36,6 @@ void tearDown() {
 }
 
 /* Mocks */
-void wb_list_free(struct wb_str_list *list) {
-}
-
 void wb_error(const char *format, ...) {
 }
 
@@ -81,6 +80,58 @@ void test_netGetResponse_post() {
 	free(res_post);
 }
 
+void test_netDownload_valid() {
+	int res;
+
+	res = net_download("https://www.google.com/images/srpr/logo4w.png", ".", "test");
+	TEST_ASSERT_EQUAL_INT(0, res);
+	res = remove("test");
+	TEST_ASSERT_EQUAL_INT(0, res);
+}
+
+void test_netDownload_invalid() {
+	int res;
+
+	res = net_download("invalid.test.url", ".", "test");
+	TEST_ASSERT_EQUAL_INT(-1, res);
+	res = remove("test");
+	TEST_ASSERT_NOT_EQUAL(0, res);
+}
+
+void test_netDownloadList_valid() {
+	int res;
+	struct wb_str_list *urls = NULL;
+
+	urls = wb_list_prepend(urls, "https://www.google.com/images/srpr/logo4w.png");
+	urls = wb_list_prepend(urls, "https://duckduckgo.com/assets/logo_homepage.normal.v102.png");
+
+	res = net_download_list(urls, ".");
+	TEST_ASSERT_EQUAL_INT(0, res);
+	res = remove("logo4w.png");
+	TEST_ASSERT_EQUAL_INT(0, res);
+	res = remove("logo_homepage.normal.v102.png");
+	TEST_ASSERT_EQUAL_INT(0, res);
+
+	wb_list_free(urls);
+}
+
+void test_netDownloadList_invalid() {
+	int res;
+	struct wb_str_list *urls = NULL;
+
+	urls = wb_list_prepend(urls, "invalid-test-1");
+	urls = wb_list_prepend(urls, "invalid-test-2");
+
+	res = net_download_list(urls, ".");
+	TEST_ASSERT_EQUAL_INT(-1, res);
+	res = remove("invalid-test-1");
+	TEST_ASSERT_NOT_EQUAL(0, res);
+	res = remove("invalid-test-1");
+	TEST_ASSERT_NOT_EQUAL(0, res);
+
+	wb_list_free(urls);
+}
+
 /* Main */
 int main(int argc, char *argv[]) {
 	Unity.TestFile=__FILE__;
@@ -89,5 +140,9 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_netGetResponse_invalidUrl, __LINE__);
 	RUN_TEST(test_netGetResponse_cookies, __LINE__);
 	RUN_TEST(test_netGetResponse_post, __LINE__);
+	RUN_TEST(test_netDownload_valid, __LINE__);
+	RUN_TEST(test_netDownload_invalid, __LINE__);
+	RUN_TEST(test_netDownloadList_valid, __LINE__);
+	RUN_TEST(test_netDownloadList_invalid, __LINE__);
 	return UnityEnd();
 }
