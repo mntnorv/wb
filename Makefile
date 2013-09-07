@@ -22,7 +22,7 @@ export APPNAME = wb
 export VERSION = 0.0.1
 
 # Libs
-export LIBS = -lcurl -ltidy -lxml2
+export LIBS = -lcurl -ltidy -lxml2 -lm
 
 # Compiler
 export CC = clang

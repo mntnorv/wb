@@ -65,7 +65,7 @@ main(int argc, char* argv[]) {
 	/* Parse arguments */
 	wb_parse_args(argc, argv, options);
 
-	/* Init */
+	/* Init net and xpath systems */
 	net_init();
 	xpath_init();
 
@@ -297,6 +297,8 @@ wb_get_image_urls(const char *url, const char *post_data,
 	page_url_length = strlen(url) + 8;
 	page_url = (char *) malloc(page_url_length);
 	for (i = 0; i < options->images; i += options->images_per_page) {
+		printf("Getting page URLs: %d - %d\r", i + 1, i + options->images_per_page);
+		fflush(stdout);
 		snprintf(page_url, page_url_length, url, i);
 
 		new_img_page_urls = wb_get_image_page_urls(page_url, post_data, cookies);
@@ -305,10 +307,16 @@ wb_get_image_urls(const char *url, const char *post_data,
 	}
 	free(page_url);
 
+	printf("\n");
+	fflush(stdout);
+
 	/* Get an image URL from every image page URL */
 	img_page_url = img_page_urls;
 	i = 0;
 	while ((i < options->images) && (img_page_url != NULL)) {
+		printf("Getting image URLs: %d / %d\r", i + 1, options->images);
+		fflush(stdout);
+
 		img_url = wb_get_image_url(img_page_url->str, cookies);
 		if (img_url != NULL) {
 			img_urls = wb_list_append(img_urls, img_url);
@@ -318,6 +326,9 @@ wb_get_image_urls(const char *url, const char *post_data,
 		img_page_url = img_page_url->next;
 		i++;
 	}
+
+	printf("\n");
+	fflush(stdout);
 
 	/* Cleanup */
 	wb_list_free(img_page_urls);

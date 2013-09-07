@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#include <math.h>
 #include <curl/curl.h>
 
 #include "types.h"
@@ -51,7 +52,6 @@ void net_cleanup() {
 	curl_global_cleanup();
 }
 
-
 /**
  * Setup the CURL handle. Creates a new handle if it has not already
  * been created, cleans up the handle otherwise.
@@ -60,11 +60,12 @@ void
 setup_curl_handle() {
 	if (curl_handle == NULL) {
 		curl_handle = curl_easy_init();
+		curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
 	} else {
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);
-		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
+		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1L);
 	}
 }
 
@@ -117,6 +118,44 @@ write_data_to_file(void *ptr, size_t size, size_t nmemb, FILE *file) {
 	size_t written;
 	written = fwrite(ptr, size, nmemb, file);
 	return written;
+}
+
+/**
+ * Reports the current CURL download progress.
+ *
+ * @param ptr - pointer to the progress data passed to CURL by
+ *   the client
+ * @param total_down - total number of bytes to download
+ * @param now_down - number of bytes downloaded
+ * @param total_up - total number of bytes downloaded
+ * @param now_up - number of bytes uploaded
+ * @return 0 if the download or upload should be continued, any
+ *   other number to cancel the operation.
+ */
+int
+download_progress(void* ptr, double total_down, double now_down, 
+	double total_up, double now_up) {
+
+	int bar_width = 25;
+	int downloaded_width, i;
+	double downloaded;
+
+	downloaded = now_down/total_down;
+	downloaded_width = round(downloaded * bar_width);
+
+	i=0;
+	printf("[");
+	for (; i < downloaded_width; i++) {
+		printf("=");
+	}
+	for (; i < bar_width; i++) {
+		printf(" ");
+	}
+
+	printf("] %3.0f%% %.0fk\r", downloaded * 100, now_down / 1024/*, total_down / 1024*/);
+	fflush(stdout);
+
+	return 0;
 }
 
 /**
@@ -195,6 +234,7 @@ net_get_response(const char *url, const char *post_data,
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_response);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &response);
+	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
 
 	if (post_data != NULL) {
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
@@ -275,9 +315,12 @@ net_download(const char *url, const char *file_path, const char *file_name) {
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_file);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, download_file);
+	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(curl_handle, CURLOPT_PROGRESSFUNCTION, download_progress);
 
 	/* Download file */
 	res = curl_easy_perform(curl_handle);
+	printf("\n");
 
 	/* Close the file */
 	if (fclose(download_file) != 0) {
