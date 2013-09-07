@@ -28,7 +28,6 @@
 
 #include "args.h"
 #include "error.h"
-#include "filesys.h"
 #include "types.h"
 
 /**************************************************
@@ -73,8 +72,6 @@ static const char *LONG_HELP = "\
   -a, --aspect=ASPECT        Search for images with this aspect ratio\n\
   -A, --anime, --manga       Search in the Anime / Manga board\n\
   -c, --color=COLOR          Search for images containing this color\n\
-  -d, --download-dir=DIR     Directory to download images to (defaults to\n\
-                             current directory)\n\
   -G, --general              Search in the Wallpapers / General board\n\
   -H, --high-res             Search in the High Resolution board\n\
   -K, --sketchy              Search for sketchy images\n\
@@ -82,8 +79,6 @@ static const char *LONG_HELP = "\
   -N, --nsfw                 Search for NSFW images (requires wallbase.cc login\n\
                              information)\n\
   -p, --password=PASSWORD    wallbase.cc password, required for NSFW content\n\
-      --print-only           Print image URLs to stdout (do not download\n\
-                             images)\n\
   -q, --query=STRING         Search for images related to this string\n\
   -r, --resolution=RES       Search for images with at least or exactly this\n\
                              resolution\n\
@@ -107,9 +102,8 @@ for any corresponding short options.";
 
 static const char *FORMAT_SHORT_USAGE = "Usage: %s [OPTION...]";
 static const char *FORMAT_LONG_USAGE = "\
-Usage: %s [-AGHKNShV] [-a ASPECT] [-c COLOR] [-d DIR] [-n COUNT]\n\
-            [-p PASSWORD] [-q STRING] [-r RES] [-s SORT] [-t INTERVAL]\n\
-            [-u USERNAME]\n";
+Usage: %s [-AGHKNShV] [-a ASPECT] [-c COLOR] [-n COUNT] [-p PASSWORD]\n\
+            [-q STRING] [-r RES] [-s SORT] [-t INTERVAL] [-u USERNAME]\n";
 
 static const char *FORMAT_SHORT_HELP = "Try '%s --help' or '%s --usage' for more information.";
 
@@ -123,12 +117,11 @@ There is NO WARRANTY, to the extent permitted by law.\n";
  * getopt specific vars
  **************************************************/
 
-static const char *GETOPT_SHORT_OPTIONS = "a:c:d:n:p:q:r:s:t:u:AGHKNRShV";
+static const char *GETOPT_SHORT_OPTIONS = "a:c:n:p:q:r:s:t:u:AGHKNRShV";
 static struct option GETOPT_LONG_OPTIONS[] = {
 	/* Options with arguments */
 	{"aspect",       required_argument, 0, 'a'},
 	{"color",        required_argument, 0, 'c'},
-	{"download-dir", required_argument, 0, 'd'},
 	{"images",       required_argument, 0, 'n'},
 	{"password",     required_argument, 0, 'p'},
 	{"query",        required_argument, 0, 'q'},
@@ -151,7 +144,6 @@ static struct option GETOPT_LONG_OPTIONS[] = {
 
 	/* Long-only options */
 	{"usage",        no_argument,       0, WB_KEY_USAGE},
-	{"print-only",   no_argument,       0, WB_KEY_PRINT_ONLY},
 	{0}
 };
 
@@ -446,14 +438,6 @@ parse_opt(int key, char *arg, struct options *options) {
 				return -1;
 			}
 			break;
-		case 'd': /* download dir */
-			if (dir_exists(arg)) {
-				options->dir = arg;
-			} else {
-				invalid_arg_error("download directory", arg);
-				return -1;
-			}
-			break;
 		case 'n': /* number of images */
 			if (parse_image_number(arg, options) == -1) {
 				invalid_arg_error("number of images", arg);
@@ -510,9 +494,6 @@ parse_opt(int key, char *arg, struct options *options) {
 			break;
 		case 'H': /* High Resolution board */
 			options->boards |= WB_BOARD_HIGHRES;
-			break;
-		case WB_KEY_PRINT_ONLY: /* print only */
-			options->flags |= WB_FLAG_PRINT_ONLY;
 			break;
 
 		/* Help, usage, errors */

@@ -62,8 +62,7 @@
 #define WB_RES_AT_LEAST        1
 
 /* Flags */
-#define WB_FLAG_PRINT_ONLY  0x01
-#define WB_FLAG_RANDOM      0x02
+#define WB_FLAG_RANDOM      0x01
 
 /* wallbase.cc purities */
 #define WB_PURITY_SFW       0x01
@@ -79,8 +78,7 @@
 
 /* getopt() option keys */
 #define WB_KEY_USAGE         300
-#define WB_KEY_PRINT_ONLY    301
-#define WB_KEY_RANDOM        302
+#define WB_KEY_RANDOM        301
 
 /**************************************************
  * Structs
@@ -93,7 +91,6 @@ struct curl_response {
 
 struct options {
 	char *username, *password;
-	char *dir;
 	char *query;
 	unsigned char toplist;
 	int color;

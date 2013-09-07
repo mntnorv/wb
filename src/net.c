@@ -20,10 +20,7 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <libgen.h>
-#include <math.h>
 #include <curl/curl.h>
 
 #include "types.h"
@@ -60,10 +57,9 @@ void
 setup_curl_handle() {
 	if (curl_handle == NULL) {
 		curl_handle = curl_easy_init();
-		curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
 		curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, ""); /* Enable the cookie engine */
 	} else {
-		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* remove all cookies */
+		curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "ALL"); /* Remove all cookies */
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, NULL);
 		curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1L);
 	}
@@ -102,60 +98,6 @@ write_data_to_response(void *ptr, size_t size, size_t nmemb, struct curl_respons
 	data->data[data->size] = '\0';
 
 	return size * nmemb;
-}
-
-/**
- * Writes CURL response to a FILE.
- *
- * @param ptr - CURL response data pointer.
- * @param size - size of the data to write in units of nmemb.
- * @param nmemb - multiplier of size.
- * @param file - the file to write data to.
- * @return the size of data written in bytes.
- */
-size_t
-write_data_to_file(void *ptr, size_t size, size_t nmemb, FILE *file) {
-	size_t written;
-	written = fwrite(ptr, size, nmemb, file);
-	return written;
-}
-
-/**
- * Reports the current CURL download progress.
- *
- * @param ptr - pointer to the progress data passed to CURL by
- *   the client
- * @param total_down - total number of bytes to download
- * @param now_down - number of bytes downloaded
- * @param total_up - total number of bytes downloaded
- * @param now_up - number of bytes uploaded
- * @return 0 if the download or upload should be continued, any
- *   other number to cancel the operation.
- */
-int
-download_progress(void* ptr, double total_down, double now_down, 
-	double total_up, double now_up) {
-
-	int bar_width = 25;
-	int downloaded_width, i;
-	double downloaded;
-
-	downloaded = now_down/total_down;
-	downloaded_width = round(downloaded * bar_width);
-
-	i=0;
-	printf("[");
-	for (; i < downloaded_width; i++) {
-		printf("=");
-	}
-	for (; i < bar_width; i++) {
-		printf(" ");
-	}
-
-	printf("] %3.0f%% %.0fk\r", downloaded * 100, now_down / 1024/*, total_down / 1024*/);
-	fflush(stdout);
-
-	return 0;
 }
 
 /**
@@ -234,7 +176,6 @@ net_get_response(const char *url, const char *post_data,
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_response);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &response);
-	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
 
 	if (post_data != NULL) {
 		curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, post_data);
@@ -263,105 +204,6 @@ net_get_response(const char *url, const char *post_data,
 	}
 	
 	return response.data;
-}
-
-/**
- * Downloads a file from the specified URL.
- *
- * @param url - the URL to download from.
- * @param file_path - path of the downloaded file.
- * @param file_name - name of the file to download. If this is NULL
- *   then the filename from the URL is used.
- * @return 0 on success, -1 otherwise.
- */
-int
-net_download(const char *url, const char *file_path, const char *file_name) {
-	CURLcode res;
-	char *full_file_path;
-	char *url_copy = NULL;
-	int path_length, full_path_length;
-	FILE *download_file;
-
-	/* Get the full file path to download to */
-	if (file_name == NULL) {
-		url_copy = strdup(url);
-		file_name = basename(url_copy);
-	}
-
-	path_length = strlen(file_path);
-	full_path_length = path_length + strlen(file_name) + 2;
-	full_file_path = (char *) malloc(full_path_length);
-
-	if ((path_length > 0) && (file_path[path_length - 1] != '/')) {
-		snprintf(full_file_path, full_path_length, "%s/%s", file_path, file_name);
-	} else {
-		snprintf(full_file_path, full_path_length, "%s%s", file_path, file_name);
-	}
-
-	if (url_copy != NULL) {
-		free(url_copy);
-	}
-
-	/* Open the file */
-	download_file = fopen(full_file_path, "wb");
-
-	if (download_file == NULL) {
-		free(full_file_path);
-		return -1;
-	}
-
-	/* Set up CURL */
-	setup_curl_handle();
-	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data_to_file);
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, download_file);
-	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
-	curl_easy_setopt(curl_handle, CURLOPT_PROGRESSFUNCTION, download_progress);
-
-	/* Download file */
-	res = curl_easy_perform(curl_handle);
-	printf("\n");
-
-	/* Close the file */
-	if (fclose(download_file) != 0) {
-		free(full_file_path);
-		return -1;
-	}
-
-	/* Check if CURL encountered errors */
-	if (res != CURLE_OK) {
-		remove(full_file_path);
-		free(full_file_path);
-		return -1;
-	}
-
-	/* Final cleanup */
-	free(full_file_path);
-
-	return 0;
-}
-
-/**
- * Downloads a list of files to the specified directory.
- *
- * @param urls - a list of URLs of files to download
- * @param dir - the dir to download to
- * @return 0 on success, -1 otherwise
- */
-int
-net_download_list(struct wb_str_list *urls, const char *dir) {
-	struct wb_str_list *url;
-	int failed = 0;
-
-	url = urls;
-	while (url != NULL) {
-		if (net_download(url->str, dir, NULL) != 0) {
-			failed++;
-		}
-		url = url->next;
-	}
-
-	return (failed == 0) ? 0 : -1;
 }
 
 /**

@@ -91,12 +91,8 @@ main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	/* Download images or print image URLs */
-	if ((options->flags & WB_FLAG_PRINT_ONLY) == 0) {
-		net_download_list(image_urls, options->dir);
-	} else {
-		wb_list_print(image_urls);
-	}
+	/* Print image URLs */
+	wb_list_print(image_urls);
 
 	/* Cleanup and return */
 	free(options);
@@ -126,7 +122,6 @@ wb_get_default_options() {
 
 	options->username = "";
 	options->password = "";
-	options->dir = ".";
 	options->images = 20;
 	options->images_per_page = 20;
 
