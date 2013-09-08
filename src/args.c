@@ -34,7 +34,7 @@
 
 /* Toplist intervals */
 static const char *WB_TOPLIST_INTERVALS[] = {
-	"0", "1d", "3d", "1w", "2w", "1m", "2m", "3m"
+	"a", "1d", "3d", "1w", "2w", "1m", "2m", "3m"
 };
 static const unsigned char WB_TOPLIST_INTERVAL_IDS[] = {
 	WB_TOPLIST_ALL_TIME, WB_TOPLIST_1D, WB_TOPLIST_3D,
@@ -64,7 +64,7 @@ static const unsigned char WB_SORT_TYPE_IDS[] = {
 static char *APP_INVOKE_NAME = "wb";
 
 static const char *ABOUT = "wb -- A wallbase.cc image search tool";
-static const char *BUG_ADDRESS = "<mntnorv+bugs@gmail.com>";
+static const char *BUG_ADDRESS = "<mntnorv+bugs at gmail dot com>";
 
 static const char *LONG_HELP = "\
   -a, --aspect=ASPECT        Search for images with this aspect ratio\n\

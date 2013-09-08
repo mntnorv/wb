@@ -1,0 +1,235 @@
+.\"
+.\" Copyright 2013 Mantas Norvaiša
+.\" 
+.\" This file is part of wb.
+.\" 
+.\" wb is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\" 
+.\" wb is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with wb.  If not, see <http://www.gnu.org/licenses/>.
+.\"
+
+.TH wb 1 "08 September 2013" "wb 0.0.1" "wb manual"
+
+.SH NAME
+wb \- A wallbase.cc image search tool
+
+.SH SYNOPSIS
+.B wb
+[OPTIONS]
+
+.SH DESCRIPTION
+.B wb
+is a tool that searches wallbase.cc for images according to the user-specified
+options and then prints their URLs. wb can be combined with other tools like
+.BR curl (1)
+or
+.BR wget (1)
+to download the images.
+
+wb supports almost all of the image search features present in wallbase.cc:
+all of the filters (including search by dominating color), toplist, random
+images, image sorting, etc.
+
+.I NSFW
+images require a wallbase.cc login. This is required by wallbase.cc and cannot
+be overcome on the client side.
+
+.SH OPTIONS
+.IP "-a, --aspect <aspect ratio>"
+Search for images with this exact aspect ratio. Aspect ratio must have the
+format: <number>:<number>, for example: 16:9. By default searches for images
+with any aspect ratio.
+
+.IP "-A, --anime, --manga"
+Search for images in the
+.B "Manga / Anime"
+board. This option can be combined with
+.I "-G, --general"
+and
+.I "-H, --high-res"
+options. By default searches for images in all of the boards.
+
+.IP "-c, --color <color>"
+Search for images with a dominating color similar to the specified color. The
+color must be a 6 character length hexadecimal number, with an optional '0x'
+prefix. Examples: 75a045, 0xAF7643.
+
+.IP "-G, --general"
+Search for images in the
+.B "Wallpapers / General"
+board. This option can be combined with
+.I "-A, --anime, --manga"
+and
+.I "-H, --high-res"
+options. By default searches for images in all of the boards.
+
+.IP "-H, --high-res"
+Search for images in the
+.B "High Resolution"
+board. This option can be combined with
+.I "-A, --anime, --manga"
+and
+.I "-G, --general"
+options. By default searches for images in all of the boards.
+
+.IP "-K, --sketchy"
+Search for images with the
+.B Sketchy
+purity. This option can be combined with
+.I "-S, --sfw"
+and
+.I "-N, --nsfw"
+options. By default searches only for images with the
+.B SFW
+purity when NOT logged in and all purities when logged in.
+
+.IP "-n, --images <count>"
+Get the specified number of image URLs. <count> must a number higher than 0. The
+number of printed URLs will sometimes be less than the specified number, but
+only if the number of images found is less than <count>. Defaults to
+.B 20
+
+.IP "-N, --nsfw"
+Search for images with the
+.B NSFW
+purity. This option can be combined with
+.I "-S, --sfw"
+and
+.I "-K, --sketchy"
+options. By default searches only for images with the
+.B SFW
+purity when NOT logged in and all purities when logged in.
+
+.IP "-p, --password <password>"
+Specify the wallbase.cc password. This and
+.I "-u, --username"
+are required to login to wallbase.cc when searching for images with the
+.B NSFW
+purity.
+
+.IP "-P, --show-progress"
+Show the progress of parsing image URLs from wallbase.cc. This is disabled by
+default, because it messes up the output if used with other tools.
+
+Example of the progress bar:
+.nf
+Getting page URLs: 1 - 20
+.br
+Getting image URLs: 20 / 20
+.br
+http://image.url/here.png
+.fi
+
+.IP "-q, --query <string>"
+Search for images related to the specified string.
+The string can include expressions documented in
+.I http://sphinxsearch.com/docs/2.1.1/extended-syntax.html
+
+This is ignored when either
+.I "-R, --random"
+or
+.I "-t, --toplist"
+options are specified.
+
+.IP "-r, --resolution <resolution>"
+Search for images with exactly the specified or greater resolutions. The
+resolution can be specified in these formats:
+.RS
+.IP <xres>x<yres>
+In this case the program searches for images with an equal or greater
+resolution. Example: 1920x1080
+.IP =<xres>x<yres>
+In this case the program search for images with the exact resolution. Example:
+=800x600
+.RE
+
+.IP "-R, --random"
+Get random images from wallbase.cc.
+
+Image filtering options that still apply:
+\fI-S, --sfw\fP, \fI-K, --sketchy\fP, \fI-N, --nsfw\fP,
+\fI-A, --anime, --manga\fP, \fI-G, --general\fP, \fI-H, --high-res\fP,
+\fI-a, --aspect\fP, \fI-r, --resolution\fP.
+
+All other image filtering options are ignored when used with this.
+
+.IP "-s, --sort <sort>"
+Set the image sort order. <sort> can be any of the following:
+
+ r, relevance
+ v, views
+ d, date (default)
+ f, favorites
+
+<sort> can prefixed with a '+' or a '-'. '+' changes the sort order to ascending
+and '-' changes the sort order to descending. By default descending sort order
+is used.
+
+Examples:
+.RS
+.IP "+d"
+Sorts by date, ascending (oldest images first)
+.IP "views"
+Sorts by number of views, descending (images with the most number of views
+first)
+.RE
+
+.IP "-S, --sfw"
+Search for images with the
+.B SFW
+purity. This option can be combined with
+.I "-K, --sketchy"
+and
+.I "-N, --nsfw"
+options. By default searches only for images with the
+.B SFW
+purity when NOT logged in and all purities when logged in.
+
+.IP "-t, --toplist <interval>"
+Get images from the wallbase.cc toplist. <interval> specifies the interval of
+time to get the most popular images from. <interval> can be any of the
+following:
+
+  a - All time
+ 1d - One day
+ 3d - Three days
+ 1w - One week
+ 2w - Two weeks
+ 1m - One month
+ 2m - Two months
+ 3m - Three months
+
+.IP "-u, --username <username>"
+Specify the wallbase.cc username. This and
+.I "-p, --password"
+are required to login to wallbase.cc when searching for images with the
+.B NSFW
+purity.
+
+.IP "-h, --help"
+Display usage help with option explanations.
+
+.IP "--usage"
+Display short usage help.
+
+.IP "-V, --version"
+Display program version.
+
+.SH AUTHORS
+Mantas Norvaisa <mntnorv+bugs at gmail dot com>
+
+.SH WWW
+https://www.github.com/mntnorv/wb
+
+.SH "SEE ALSO"
+.BR curl (1),
+.BR wget (1)
