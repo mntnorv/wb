@@ -339,7 +339,7 @@ void test_parseOpt_toplist_valid() {
 	TEST_ASSERT_EQUAL_INT(WB_TOPLIST_3M, options.toplist);
 
 	resetOptions();
-	res = parse_opt('t', "0", &options);
+	res = parse_opt('t', "a", &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_INT(WB_TOPLIST_ALL_TIME, options.toplist);
 }
