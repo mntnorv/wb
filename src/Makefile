@@ -27,13 +27,12 @@ LDFLAGS = $(LIBS)
 # Filenames
 SOURCES = wb.c args.c error.c net.c query.c str_list.c url_enc.c xml.c xpath.c
 OBJECTS = $(SOURCES:.c=.o)
-EXECUTABLE = wb
 ADDITIONAL_FILES = Makefile README.md COPYING
 
 all: $(SOURCES) $(EXECUTABLE)
 	
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $(BIN_DIR)/$@
+	$(CC) $(OBJECTS) $(LDFLAGS) -o "$(LOCAL_BIN_DIR)/$@"
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<

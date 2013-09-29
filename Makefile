@@ -19,7 +19,11 @@
 
 # App info
 export APPNAME = wb
-export VERSION = 0.0.1
+export VERSION = 0.1.0
+
+# Filenames
+export EXECUTABLE = wb
+export MANPAGE = wb.1
 
 # Libs
 export LIBS = -lcurl -ltidy -lxml2
@@ -28,18 +32,28 @@ export LIBS = -lcurl -ltidy -lxml2
 export CC = clang
 
 # Directories
-export BIN_DIR = "$(CURDIR)/bin"
+export LOCAL_BIN_DIR = $(CURDIR)/bin
+
+PREFIX ?= /usr
+BINDIR = $(PREFIX)/bin
+MANDIR = $(PREFIX)/share/man/man1
 
 all:
-	mkdir -p $(BIN_DIR)
+	mkdir -p "$(LOCAL_BIN_DIR)"
 	@$(MAKE) -C src
+
+install:
+	install -Dm755 "$(LOCAL_BIN_DIR)/$(EXECUTABLE)" "$(DESTDIR)$(BINDIR)/$(EXECUTABLE)"
+	install -Dm644 "$(MANPAGE)" "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
+	@sed -i -e 's/@VERSION@/'$(VERSION)'/' "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
+	gzip -9 -f "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
 
 test:
 	@$(MAKE) -C tests test
 
 clean:
-	rm -rf $(BIN_DIR)
+	rm -rf "$(LOCAL_BIN_DIR)"
 	@$(MAKE) -C src clean
 	@$(MAKE) -C tests clean
 
-.PHONY: clean test
+.PHONY: install clean test
