@@ -20,6 +20,7 @@
 # App info
 export APPNAME = wb
 export VERSION = 0.1.0
+export DATE = 2013-09-29
 
 # Filenames
 export EXECUTABLE = wb
@@ -38,6 +39,13 @@ PREFIX ?= /usr
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
 
+# Dist files
+DIST_PATTERNS = *.[ch] *.sh Makefile
+DIST_DIRS = src tests tests/unity
+DIST_FILES = Makefile COPYING README.md wb.1 $(foreach dir, $(DIST_DIRS), $(foreach pattern, $(DIST_PATTERNS), $(wildcard $(dir)/$(pattern))))
+TARNAME = $(APPNAME)-$(VERSION)
+TARFILE = $(TARNAME).tar.gz
+
 all:
 	mkdir -p "$(LOCAL_BIN_DIR)"
 	@$(MAKE) -C src
@@ -46,14 +54,24 @@ install:
 	install -Dm755 "$(LOCAL_BIN_DIR)/$(EXECUTABLE)" "$(DESTDIR)$(BINDIR)/$(EXECUTABLE)"
 	install -Dm644 "$(MANPAGE)" "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
 	@sed -i -e 's/@VERSION@/'$(VERSION)'/' "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
+	@sed -i -e 's/@DATE@/'$(DATE)'/' "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
 	gzip -9 -f "$(DESTDIR)$(MANDIR)/$(MANPAGE)"
+
+dist: $(TARFILE)
 
 test:
 	@$(MAKE) -C tests test
 
 clean:
-	rm -rf "$(LOCAL_BIN_DIR)"
+	rm -rf "$(LOCAL_BIN_DIR)" "$(TARFILE)"
 	@$(MAKE) -C src clean
 	@$(MAKE) -C tests clean
 
-.PHONY: install clean test
+$(TARFILE): $(DIST_FILES)
+	rm -rf $(TARFILE) $(TARNAME)
+	mkdir $(TARNAME)
+	rsync -R $(DIST_FILES) $(TARNAME)
+	tar -czf $(TARFILE) $(TARNAME)
+	rm -rf $(TARNAME)
+
+.PHONY: install clean test dist
