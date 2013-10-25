@@ -279,6 +279,29 @@ parse_color(char *arg, struct options *options) {
 }
 
 /**
+ * Parses a favorites id from a string.
+ *
+ * @param arg - a string containing a favorites id. The id must
+ *     be an integer greater than 0.
+ * @param options - a pointer to an options struct.
+ * @return 0 on success, -1 otherwise.
+ */
+int
+parse_favorites_id(char *arg, struct options *options) {
+	int num;
+	char *num_end;
+
+	num = strtol(arg, &num_end, 10);
+	if (arg + strlen(arg) != num_end || num <= 0) {
+		return -1;
+	} else {
+		options->favorites_id = num;
+	}
+
+	return 0;
+}
+
+/**
  * Parses the number of images from a string.
  *
  * @param arg - a string containing a number. The number must
@@ -435,6 +458,12 @@ parse_opt(int key, char *arg, struct options *options) {
 		case 'c': /* color */
 			if (parse_color(arg, options) == -1) {
 				invalid_arg_error("color", arg);
+				return -1;
+			}
+			break;
+		case 'f': /* favorites id */
+			if (parse_favorites_id(arg, options) == -1) {
+				invalid_arg_error("favorites id", arg);
 				return -1;
 			}
 			break;
