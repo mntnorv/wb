@@ -92,6 +92,7 @@ struct options {
 	char *username, *password;
 	char *query;
 	unsigned char toplist;
+	int favorites_id;
 	int color;
 	int images, images_per_page;
 	unsigned char flags, purity, boards;

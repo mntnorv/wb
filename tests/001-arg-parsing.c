@@ -52,6 +52,7 @@ void resetOptions() {
 	options.query = NULL;
 	options.color = -1;
 	options.toplist = WB_TOPLIST_NONE;
+	options.favorites_id = -1;
 
 	options.res_x = 0;
 	options.res_y = 0;
@@ -132,6 +133,27 @@ void test_parseOpt_color_invalid() {
 
 	resetOptions();
 	res = parse_opt('a', "0fail0", &options);
+	TEST_ASSERT_EQUAL_INT(-1, res);
+}
+
+void test_parseOpt_favorites_valid() {
+	int res;
+
+	resetOptions();
+	res = parse_opt('f', "452654", &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(452654, options.favorites_id);
+}
+
+void test_parseOpt_favorites_invalid() {
+	int res;
+
+	resetOptions();
+	res = parse_opt('f', "-1", &options);
+	TEST_ASSERT_EQUAL_INT(-1, res);
+
+	resetOptions();
+	res = parse_opt('f', "not really a favorites id", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 }
 
@@ -416,6 +438,8 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_parseOpt_aspectRatio_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_color_valid, __LINE__);
 	RUN_TEST(test_parseOpt_color_invalid, __LINE__);
+	RUN_TEST(test_parseOpt_favorites_valid, __LINE__);
+	RUN_TEST(test_parseOpt_favorites_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_valid, __LINE__);
 	RUN_TEST(test_parseOpt_imageNum_invalid, __LINE__);
 	RUN_TEST(test_parseOpt_password_valid, __LINE__);

@@ -27,9 +27,10 @@
 static const char *URL_BASE = "http://wallbase.cc";
 static const char *URL_ENDPOINT_SUFFIX = "/index/%d?section=wallpapers";
 
-static const char *URL_ENDPOINT_SEARCH  = "/search";
-static const char *URL_ENDPOINT_TOPLIST = "/toplist";
-static const char *URL_ENDPOINT_RANDOM  = "/random";
+static const char *URL_ENDPOINT_SEARCH    = "/search";
+static const char *URL_ENDPOINT_TOPLIST   = "/toplist";
+static const char *URL_ENDPOINT_RANDOM    = "/random";
+static const char *URL_ENDPOINT_FAVORITES = "/favorites";
 
 /**
  * Try to detect the query type from options.
