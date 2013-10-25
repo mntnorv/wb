@@ -279,15 +279,15 @@ parse_color(char *arg, struct options *options) {
 }
 
 /**
- * Parses a favorites id from a string.
+ * Parses a collection id from a string.
  *
- * @param arg - a string containing a favorites id. The id must
+ * @param arg - a string containing a collection id. The id must
  *     be an integer greater than 0.
  * @param options - a pointer to an options struct.
  * @return 0 on success, -1 otherwise.
  */
 int
-parse_favorites_id(char *arg, struct options *options) {
+parse_collection_id(char *arg, struct options *options) {
 	int num;
 	char *num_end;
 
@@ -295,7 +295,7 @@ parse_favorites_id(char *arg, struct options *options) {
 	if (arg + strlen(arg) != num_end || num <= 0) {
 		return -1;
 	} else {
-		options->favorites_id = num;
+		options->collection_id = num;
 	}
 
 	return 0;
@@ -461,9 +461,9 @@ parse_opt(int key, char *arg, struct options *options) {
 				return -1;
 			}
 			break;
-		case 'f': /* favorites id */
-			if (parse_favorites_id(arg, options) == -1) {
-				invalid_arg_error("favorites id", arg);
+		case 'f': /* collection id */
+			if (parse_collection_id(arg, options) == -1) {
+				invalid_arg_error("collection id", arg);
 				return -1;
 			}
 			break;

@@ -126,7 +126,7 @@ wb_get_default_options() {
 	options->query = NULL;
 	options->color = -1;
 	options->toplist = WB_TOPLIST_NONE;
-	opyions->favorites_id = -1;
+	options->collection_id = -1;
 
 	options->res_x = 0;
 	options->res_y = 0;
