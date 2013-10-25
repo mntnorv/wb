@@ -30,7 +30,7 @@ export MANPAGE = wb.1
 export LIBS = -lcurl -ltidy -lxml2
 
 # Compiler
-export CC = clang
+export CC ?= clang
 
 # Directories
 export LOCAL_BIN_DIR = $(CURDIR)/bin
