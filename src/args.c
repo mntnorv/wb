@@ -76,6 +76,7 @@ static const char *LONG_HELP = "\
   -n, --images=COUNT         Number of images to download\n\
   -N, --nsfw                 Search for NSFW images (requires wallbase.cc login\n\
                              information)\n\
+  -o, --collection=ID        Search for images in the specified collection\n\
   -p, --password=PASSWORD    wallbase.cc password, required for NSFW content\n\
   -P, --show-progress        Show progress information (off by default)\n\
   -q, --query=STRING         Search for images related to this string\n\
@@ -101,7 +102,7 @@ for any corresponding short options.";
 
 static const char *FORMAT_SHORT_USAGE = "Usage: %s [OPTION...]";
 static const char *FORMAT_LONG_USAGE = "\
-Usage: %s [-AGHKNPRShV] [-a ASPECT] [-c COLOR] [-n COUNT] [-p PASSWORD]\n\
+Usage: %s [-AGHKNPRShV] [-a ASPECT] [-c COLOR] [-n COUNT] [-o ID] [-p PASSWORD]\n\
             [-q STRING] [-r RES] [-s SORT] [-t INTERVAL] [-u USERNAME]\n";
 
 static const char *FORMAT_SHORT_HELP = "Try '%s --help' or '%s --usage' for more information.";
@@ -116,12 +117,13 @@ There is NO WARRANTY, to the extent permitted by law.\n";
  * getopt specific vars
  **************************************************/
 
-static const char *GETOPT_SHORT_OPTIONS = "a:c:n:p:q:r:s:t:u:AGHKNPRShV";
+static const char *GETOPT_SHORT_OPTIONS = "a:c:n:o:p:q:r:s:t:u:AGHKNPRShV";
 static struct option GETOPT_LONG_OPTIONS[] = {
 	/* Options with arguments */
 	{"aspect",        required_argument, 0, 'a'},
 	{"color",         required_argument, 0, 'c'},
 	{"images",        required_argument, 0, 'n'},
+	{"collection",    required_argument, 0, 'o'},
 	{"password",      required_argument, 0, 'p'},
 	{"query",         required_argument, 0, 'q'},
 	{"resolution",    required_argument, 0, 'r'},
@@ -461,15 +463,15 @@ parse_opt(int key, char *arg, struct options *options) {
 				return -1;
 			}
 			break;
-		case 'f': /* collection id */
-			if (parse_collection_id(arg, options) == -1) {
-				invalid_arg_error("collection id", arg);
-				return -1;
-			}
-			break;
 		case 'n': /* number of images */
 			if (parse_image_number(arg, options) == -1) {
 				invalid_arg_error("number of images", arg);
+				return -1;
+			}
+			break;
+		case 'o': /* collection id */
+			if (parse_collection_id(arg, options) == -1) {
+				invalid_arg_error("collection id", arg);
 				return -1;
 			}
 			break;

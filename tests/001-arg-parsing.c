@@ -120,40 +120,19 @@ void test_parseOpt_color_invalid() {
 	int res;
 
 	resetOptions();
-	res = parse_opt('a', "ff", &options);
+	res = parse_opt('c', "ff", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 
 	resetOptions();
-	res = parse_opt('a', "0x1234567", &options);
+	res = parse_opt('c', "0x1234567", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 
 	resetOptions();
-	res = parse_opt('a', "-fabcd", &options);
+	res = parse_opt('c', "-fabcd", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 
 	resetOptions();
-	res = parse_opt('a', "0fail0", &options);
-	TEST_ASSERT_EQUAL_INT(-1, res);
-}
-
-void test_parseOpt_collection_valid() {
-	int res;
-
-	resetOptions();
-	res = parse_opt('f', "452654", &options);
-	TEST_ASSERT_EQUAL_INT(0, res);
-	TEST_ASSERT_EQUAL_INT(452654, options.collection_id);
-}
-
-void test_parseOpt_collection_invalid() {
-	int res;
-
-	resetOptions();
-	res = parse_opt('f', "-1", &options);
-	TEST_ASSERT_EQUAL_INT(-1, res);
-
-	resetOptions();
-	res = parse_opt('f', "not really a favorites id", &options);
+	res = parse_opt('c', "0fail0", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 }
 
@@ -184,6 +163,27 @@ void test_parseOpt_imageNum_invalid() {
 
 	resetOptions();
 	res = parse_opt('n', "0xfakenumber", &options);
+	TEST_ASSERT_EQUAL_INT(-1, res);
+}
+
+void test_parseOpt_collection_valid() {
+	int res;
+
+	resetOptions();
+	res = parse_opt('o', "452654", &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(452654, options.collection_id);
+}
+
+void test_parseOpt_collection_invalid() {
+	int res;
+
+	resetOptions();
+	res = parse_opt('o', "-1", &options);
+	TEST_ASSERT_EQUAL_INT(-1, res);
+
+	resetOptions();
+	res = parse_opt('o', "not really a favorites id", &options);
 	TEST_ASSERT_EQUAL_INT(-1, res);
 }
 
