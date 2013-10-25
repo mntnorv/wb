@@ -34,6 +34,7 @@ void resetOptions() {
 	options.query = NULL;
 	options.color = -1;
 	options.toplist = WB_TOPLIST_NONE;
+	options.collection_id = -1;
 
 	options.res_x = 0;
 	options.res_y = 0;
@@ -135,6 +136,24 @@ void test_wbGenerateQuery_random() {
 	}
 }
 
+void test_wbGenerateQuery_collection() {
+	struct wb_query *query;
+
+	resetOptions();
+	options.collection_id = 1234;
+
+	query = wb_generate_query(&options);
+
+	TEST_ASSERT_NOT_NULL(query);
+
+	if (query != NULL) {
+		TEST_ASSERT_EQUAL_STRING("http://wallbase.cc/collection/1234/%d?section=wallpapers&res_opt=eqeq&res=0x0&thpp=20&purity=111&board=123&aspect=0.00", query->url);
+		TEST_ASSERT_NULL(query->post_data);
+
+		wb_query_free(query);
+	}
+}
+
 /* Main */
 int main(int argc, char *argv[]) {
 	Unity.TestFile=__FILE__;
@@ -142,5 +161,6 @@ int main(int argc, char *argv[]) {
 	RUN_TEST(test_wbGenerateQuery_search, __LINE__);
 	RUN_TEST(test_wbGenerateQuery_toplist, __LINE__);
 	RUN_TEST(test_wbGenerateQuery_random, __LINE__);
+	RUN_TEST(test_wbGenerateQuery_collection, __LINE__);
 	return UnityEnd();
 }

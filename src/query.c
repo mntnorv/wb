@@ -25,12 +25,13 @@
 #include "query.h"
 
 static const char *URL_BASE = "http://wallbase.cc";
-static const char *URL_ENDPOINT_SUFFIX = "/index/%d?section=wallpapers";
+static const char *URL_ENDPOINT_GENERAL_SUFFIX = "/index/%d?section=wallpapers";
+static const char *URL_ENDPOINT_COLLECTION_SUFFIX = "/%d/%%d?section=wallpapers";
 
-static const char *URL_ENDPOINT_SEARCH      = "/search";
-static const char *URL_ENDPOINT_TOPLIST     = "/toplist";
-static const char *URL_ENDPOINT_RANDOM      = "/random";
-/*static const char *URL_ENDPOINT_COLLECTIONS = "/collection";*/
+static const char *URL_ENDPOINT_SEARCH     = "/search";
+static const char *URL_ENDPOINT_TOPLIST    = "/toplist";
+static const char *URL_ENDPOINT_RANDOM     = "/random";
+static const char *URL_ENDPOINT_COLLECTION = "/collection";
 
 /**
  * Try to detect the query type from options.
@@ -42,6 +43,11 @@ static const char *URL_ENDPOINT_RANDOM      = "/random";
 int
 get_query_type(struct options *options) {
 	int query_type = WB_TYPE_SEARCH;
+
+	/* Detect collection search */
+	if (options->collection_id != -1) {
+		query_type = WB_TYPE_COLLECTION;
+	}
 
 	/* Detect toplist search */
 	if (options->toplist != WB_TOPLIST_NONE) {
@@ -455,28 +461,40 @@ wb_generate_query(struct options *options) {
 	struct wb_query *query;
 	int query_type;
 	char *url, *temp;
+
 	const char *endpoint;
+	char *suffix;
 
 	query = (struct wb_query *) malloc(sizeof(struct wb_query));
 	url = (char *) malloc(128);
 
-	/* Determine the endpoint ot be used */
+	/* Determine the endpoint to be used */
 	query_type = get_query_type(options);
 
 	switch (query_type) {
 		case WB_TYPE_SEARCH:
 			endpoint = URL_ENDPOINT_SEARCH;
+			suffix = strdup(URL_ENDPOINT_GENERAL_SUFFIX);
 			break;
 		case WB_TYPE_TOPLIST:
 			endpoint = URL_ENDPOINT_TOPLIST;
+			suffix = strdup(URL_ENDPOINT_GENERAL_SUFFIX);
 			break;
 		case WB_TYPE_RANDOM:
 			endpoint = URL_ENDPOINT_RANDOM;
+			suffix = strdup(URL_ENDPOINT_GENERAL_SUFFIX);
+			break;
+		case WB_TYPE_COLLECTION:
+			endpoint = URL_ENDPOINT_COLLECTION;
+			suffix = (char *) malloc(32);
+			snprintf(suffix, 32, URL_ENDPOINT_COLLECTION_SUFFIX,
+				options->collection_id);
 			break;
 	}
 
 	/* Generate the endpoint URL */
-	snprintf(url, 128, "%s%s%s", URL_BASE, endpoint, URL_ENDPOINT_SUFFIX);
+	snprintf(url, 128, "%s%s%s", URL_BASE, endpoint, suffix);
+	free(suffix);
 
 	/* Add parameters from the option structure */
 	temp = add_url_params_from_options(url, query_type, options);

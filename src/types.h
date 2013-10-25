@@ -33,6 +33,7 @@
 #define WB_TYPE_SEARCH         0
 #define WB_TYPE_TOPLIST        1
 #define WB_TYPE_RANDOM         2
+#define WB_TYPE_COLLECTION     3
 
 /* Sort types */
 #define WB_SORT_RELEVANCE      1
