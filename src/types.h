@@ -40,6 +40,7 @@
 #define WB_SORT_VIEWS          2
 #define WB_SORT_DATE           3
 #define WB_SORT_FAVORITES      4
+#define WB_SORT_RANDOM         5
 
 /* Sort orders */
 #define WB_SORT_ASCENDING      0

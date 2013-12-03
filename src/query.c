@@ -109,6 +109,9 @@ get_sort_by_string(struct options *options) {
 		case WB_SORT_FAVORITES:
 			str = "favs";
 			break;
+		case WB_SORT_RANDOM:
+			str = "random";
+			break;
 	}
 
 	return str;

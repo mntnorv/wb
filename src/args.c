@@ -46,13 +46,14 @@ static const unsigned char WB_TOPLIST_INTERVAL_IDS[] = {
 
 /* Sort types */
 static const char *WB_SORT_TYPES_SHORT[] = {
-	"r", "v", "d", "f"
+	"r", "v", "d", "f", "n"
 };
 static const char *WB_SORT_TYPES_LONG[] = {
-	"relevance", "views", "date", "favorites"
+	"relevance", "views", "date", "favorites", "random"
 };
 static const unsigned char WB_SORT_TYPE_IDS[] = {
-	WB_SORT_RELEVANCE, WB_SORT_VIEWS, WB_SORT_DATE, WB_SORT_FAVORITES
+	WB_SORT_RELEVANCE, WB_SORT_VIEWS, WB_SORT_DATE, WB_SORT_FAVORITES,
+	WB_SORT_RANDOM
 };
 
 #define WB_SORT_TYPES_SIZE ARR_SIZE(WB_SORT_TYPE_IDS)

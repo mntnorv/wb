@@ -276,6 +276,12 @@ void test_parseOpt_sort_valid() {
 	TEST_ASSERT_EQUAL_INT(WB_SORT_DATE, options.sort_by);
 
 	resetOptions();
+	res = parse_opt('s', "-n", &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(WB_SORT_RANDOM, options.sort_by);
+	TEST_ASSERT_EQUAL_INT(WB_SORT_DESCENDING, options.sort_order);
+
+	resetOptions();
 	res = parse_opt('s', "relevance", &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_INT(WB_SORT_RELEVANCE, options.sort_by);
@@ -296,6 +302,12 @@ void test_parseOpt_sort_valid() {
 	res = parse_opt('s', "date", &options);
 	TEST_ASSERT_EQUAL_INT(0, res);
 	TEST_ASSERT_EQUAL_INT(WB_SORT_DATE, options.sort_by);
+
+	resetOptions();
+	res = parse_opt('s', "+random", &options);
+	TEST_ASSERT_EQUAL_INT(0, res);
+	TEST_ASSERT_EQUAL_INT(WB_SORT_RANDOM, options.sort_by);
+	TEST_ASSERT_EQUAL_INT(WB_SORT_ASCENDING, options.sort_order);
 }
 
 void test_parseOpt_sort_invalid() {
