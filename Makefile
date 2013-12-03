@@ -19,8 +19,8 @@
 
 # App info
 export APPNAME = wb
-export VERSION = 0.1.0
-export DATE = 2013-09-29
+export VERSION = 0.1.1
+export DATE = 2013-12-03
 
 # Filenames
 export EXECUTABLE = wb
