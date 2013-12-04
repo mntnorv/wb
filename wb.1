@@ -109,6 +109,11 @@ options. By default searches only for images with the
 .B SFW
 purity when NOT logged in and all purities when logged in.
 
+.IP "-o, --collection <collection>"
+Get images from the specified collection. <collection> is the id of the
+collection. This id can be seen in the collection url. For example:
+http://wallbase.cc/collection/\fB33521\fP. The id is in bold here.
+
 .IP "-p, --password <password>"
 Specify the wallbase.cc password. This and
 .I "-u, --username"
@@ -120,14 +125,10 @@ purity.
 Show the progress of parsing image URLs from wallbase.cc. This is disabled by
 default, because it messes up the output if used with other tools.
 
-Example of the progress bar:
-.nf
-Getting page URLs: 1 - 20
-.br
-Getting image URLs: 20 / 20
-.br
-http://image.url/here.png
-.fi
+Example of the progress information:
+ Getting page URLs: 1 - 20
+ Getting image URLs: 20 / 20
+ http://image.url/here.png
 
 .IP "-q, --query <string>"
 Search for images related to the specified string.
