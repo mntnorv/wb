@@ -33,7 +33,7 @@ for testfile; do
 	echo "-----------------------"
 	./$testfile
 
-	if [ "$?" == "1" ]; then
+	if [ "$?" != "0" ]; then
 		FAILED=$(($FAILED + 1))
 	fi
 done
